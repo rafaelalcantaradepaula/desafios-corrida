@@ -30,7 +30,7 @@ export default async function handler(request: Request) {
       return unauthorized("Credenciais administrativas invalidas.");
     }
 
-    const session = await createAdminSession(user.id);
+    const session = await createAdminSession(user);
 
     return ok(
       {

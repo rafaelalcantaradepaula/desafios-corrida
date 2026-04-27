@@ -1,5 +1,4 @@
-import { createHash, pbkdf2Sync, randomBytes, timingSafeEqual } from "node:crypto";
-import { getDb } from "./db.js";
+import { createHmac, pbkdf2Sync, randomBytes, timingSafeEqual } from "node:crypto";
 import { getServerEnv } from "./env.js";
 
 const SESSION_COOKIE_NAME = "dc_admin_session";
@@ -12,8 +11,6 @@ const BOOTSTRAP_ADMIN_EMAIL = "admin@desafioscorrida.local";
 const BOOTSTRAP_ADMIN_PASSWORD_HASH =
   "pbkdf2_sha256$120000$QxKOZWWGBcJLU6rUEQ6cWjQ=$GZaf0iE1O+Zes20m6q4DOasblRtYkWaX6sTbTC4XuDo=";
 
-let authBootstrapPromise: Promise<void> | null = null;
-
 type AdminUser = {
   id: string;
   name: string;
@@ -21,22 +18,12 @@ type AdminUser = {
   role: string;
 };
 
-type SessionRecord = {
-  id: string;
-  user_id: string;
-  session_token_hash: string;
-  expires_at: string;
+type SessionPayload = {
+  sub: string;
   name: string;
   email: string;
   role: string;
-};
-
-type AdminCredentialRecord = {
-  id: string;
-  name: string;
-  email: string;
-  password_hash: string;
-  role: string;
+  exp: number;
 };
 
 function toBase64(value: Buffer) {
@@ -47,63 +34,107 @@ function fromBase64(value: string) {
   return Buffer.from(value, "base64");
 }
 
-async function runAuthBootstrap() {
-  const db = getDb();
-
-  await db`
-    CREATE TABLE IF NOT EXISTS users (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      email TEXT NOT NULL UNIQUE,
-      password_hash TEXT NOT NULL,
-      role TEXT NOT NULL DEFAULT 'admin',
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    )
-  `;
-
-  await db`
-    CREATE TABLE IF NOT EXISTS admin_sessions (
-      id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      session_token_hash TEXT NOT NULL UNIQUE,
-      expires_at TIMESTAMPTZ NOT NULL,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    )
-  `;
-
-  await db`
-    CREATE INDEX IF NOT EXISTS admin_sessions_user_id_idx
-    ON admin_sessions(user_id)
-  `;
-
-  await db`
-    CREATE INDEX IF NOT EXISTS admin_sessions_expires_at_idx
-    ON admin_sessions(expires_at)
-  `;
-
-  await db`
-    INSERT INTO users (id, name, email, password_hash, role)
-    VALUES (
-      ${BOOTSTRAP_ADMIN_ID},
-      ${BOOTSTRAP_ADMIN_NAME},
-      ${BOOTSTRAP_ADMIN_EMAIL},
-      ${BOOTSTRAP_ADMIN_PASSWORD_HASH},
-      'admin'
-    )
-    ON CONFLICT (email) DO NOTHING
-  `;
+function toBase64Url(value: string) {
+  return Buffer.from(value, "utf-8").toString("base64url");
 }
 
-async function ensureAuthBootstrap() {
-  if (!authBootstrapPromise) {
-    authBootstrapPromise = runAuthBootstrap().catch((error) => {
-      authBootstrapPromise = null;
-      throw error;
-    });
+function fromBase64Url(value: string) {
+  return Buffer.from(value, "base64url").toString("utf-8");
+}
+
+function getSessionSecret() {
+  return getServerEnv().authSecret || "desafios-corrida-bootstrap-secret";
+}
+
+function signSessionPayload(encodedPayload: string) {
+  return createHmac("sha256", getSessionSecret())
+    .update(encodedPayload)
+    .digest("base64url");
+}
+
+function createSessionToken(user: AdminUser, expiresAt: Date) {
+  const payload: SessionPayload = {
+    sub: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    exp: expiresAt.getTime(),
+  };
+
+  const encodedPayload = toBase64Url(JSON.stringify(payload));
+  const signature = signSessionPayload(encodedPayload);
+
+  return `${encodedPayload}.${signature}`;
+}
+
+function verifySessionToken(token: string): AdminUser | null {
+  const [encodedPayload, signature] = token.split(".");
+
+  if (!encodedPayload || !signature) {
+    return null;
   }
 
-  await authBootstrapPromise;
+  const expectedSignature = signSessionPayload(encodedPayload);
+  const providedBuffer = Buffer.from(signature, "utf-8");
+  const expectedBuffer = Buffer.from(expectedSignature, "utf-8");
+
+  if (
+    providedBuffer.length !== expectedBuffer.length ||
+    !timingSafeEqual(providedBuffer, expectedBuffer)
+  ) {
+    return null;
+  }
+
+  const payload = JSON.parse(fromBase64Url(encodedPayload)) as SessionPayload;
+
+  if (payload.exp <= Date.now()) {
+    return null;
+  }
+
+  return {
+    id: payload.sub,
+    name: payload.name,
+    email: payload.email,
+    role: payload.role,
+  };
+}
+
+function parseCookies(header: string | null) {
+  const cookieMap = new Map<string, string>();
+
+  if (!header) {
+    return cookieMap;
+  }
+
+  for (const item of header.split(";")) {
+    const [rawName, ...rawValue] = item.trim().split("=");
+    if (!rawName || rawValue.length === 0) {
+      continue;
+    }
+
+    cookieMap.set(rawName, decodeURIComponent(rawValue.join("=")));
+  }
+
+  return cookieMap;
+}
+
+function buildSessionCookie(token: string, expiresAt: Date) {
+  const authUrl = getServerEnv().authUrl;
+  const shouldUseSecureCookie = authUrl.startsWith("https://");
+  const segments = [
+    `${SESSION_COOKIE_NAME}=${encodeURIComponent(token)}`,
+    "Path=/",
+    "HttpOnly",
+    "SameSite=Lax",
+    `Expires=${expiresAt.toUTCString()}`,
+    `Max-Age=${Math.floor((expiresAt.getTime() - Date.now()) / 1000)}`,
+  ];
+
+  if (shouldUseSecureCookie) {
+    segments.push("Secure");
+  }
+
+  return segments.join("; ");
 }
 
 export function hashPassword(password: string) {
@@ -152,52 +183,6 @@ export function verifyPassword(password: string, storedHash: string) {
   );
 }
 
-function hashSessionToken(token: string) {
-  const pepper = getServerEnv().authSecret;
-
-  return createHash("sha256")
-    .update(`${token}:${pepper}`)
-    .digest("hex");
-}
-
-function parseCookies(header: string | null) {
-  const cookieMap = new Map<string, string>();
-
-  if (!header) {
-    return cookieMap;
-  }
-
-  for (const item of header.split(";")) {
-    const [rawName, ...rawValue] = item.trim().split("=");
-    if (!rawName || rawValue.length === 0) {
-      continue;
-    }
-
-    cookieMap.set(rawName, decodeURIComponent(rawValue.join("=")));
-  }
-
-  return cookieMap;
-}
-
-function buildSessionCookie(token: string, expiresAt: Date) {
-  const authUrl = getServerEnv().authUrl;
-  const shouldUseSecureCookie = authUrl.startsWith("https://");
-  const segments = [
-    `${SESSION_COOKIE_NAME}=${encodeURIComponent(token)}`,
-    "Path=/",
-    "HttpOnly",
-    "SameSite=Lax",
-    `Expires=${expiresAt.toUTCString()}`,
-    `Max-Age=${Math.floor((expiresAt.getTime() - Date.now()) / 1000)}`,
-  ];
-
-  if (shouldUseSecureCookie) {
-    segments.push("Secure");
-  }
-
-  return segments.join("; ");
-}
-
 export function clearSessionCookie() {
   const authUrl = getServerEnv().authUrl;
   const secureSegment = authUrl.startsWith("https://") ? "; Secure" : "";
@@ -205,18 +190,9 @@ export function clearSessionCookie() {
   return `${SESSION_COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax${secureSegment}; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT`;
 }
 
-export async function createAdminSession(userId: string) {
-  await ensureAuthBootstrap();
-
-  const token = randomBytes(32).toString("hex");
-  const tokenHash = hashSessionToken(token);
+export async function createAdminSession(user: AdminUser) {
   const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
-  const db = getDb();
-
-  await db`
-    INSERT INTO admin_sessions (id, user_id, session_token_hash, expires_at)
-    VALUES (${crypto.randomUUID()}, ${userId}, ${tokenHash}, ${expiresAt.toISOString()})
-  `;
+  const token = createSessionToken(user, expiresAt);
 
   return {
     token,
@@ -226,19 +202,7 @@ export async function createAdminSession(userId: string) {
 }
 
 export async function deleteAdminSession(sessionToken: string | null) {
-  if (!sessionToken) {
-    return;
-  }
-
-  await ensureAuthBootstrap();
-
-  const db = getDb();
-  const tokenHash = hashSessionToken(sessionToken);
-
-  await db`
-    DELETE FROM admin_sessions
-    WHERE session_token_hash = ${tokenHash}
-  `;
+  void sessionToken;
 }
 
 export async function getAuthenticatedAdmin(request: Request): Promise<AdminUser | null> {
@@ -248,65 +212,22 @@ export async function getAuthenticatedAdmin(request: Request): Promise<AdminUser
     return null;
   }
 
-  await ensureAuthBootstrap();
-
-  const db = getDb();
-  const tokenHash = hashSessionToken(token);
-  const rows = (await db`
-    SELECT
-      admin_sessions.id,
-      admin_sessions.user_id,
-      admin_sessions.session_token_hash,
-      admin_sessions.expires_at,
-      users.name,
-      users.email,
-      users.role
-    FROM admin_sessions
-    INNER JOIN users ON users.id = admin_sessions.user_id
-    WHERE admin_sessions.session_token_hash = ${tokenHash}
-      AND admin_sessions.expires_at > NOW()
-    LIMIT 1
-  `) as SessionRecord[];
-
-  const session = rows[0];
-
-  if (!session) {
-    return null;
-  }
-
-  return {
-    id: session.user_id,
-    name: session.name,
-    email: session.email,
-    role: session.role,
-  };
+  return verifySessionToken(token);
 }
 
 export async function authenticateAdmin(email: string, password: string) {
-  await ensureAuthBootstrap();
-
-  const db = getDb();
-  const rows = (await db`
-    SELECT id, name, email, password_hash, role
-    FROM users
-    WHERE email = ${email}
-    LIMIT 1
-  `) as AdminCredentialRecord[];
-
-  const user = rows[0];
-
-  if (!user || user.role !== "admin") {
+  if (email !== BOOTSTRAP_ADMIN_EMAIL) {
     return null;
   }
 
-  if (!verifyPassword(password, user.password_hash)) {
+  if (!verifyPassword(password, BOOTSTRAP_ADMIN_PASSWORD_HASH)) {
     return null;
   }
 
   return {
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    role: user.role,
+    id: BOOTSTRAP_ADMIN_ID,
+    name: BOOTSTRAP_ADMIN_NAME,
+    email: BOOTSTRAP_ADMIN_EMAIL,
+    role: "admin",
   };
 }
