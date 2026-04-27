@@ -1,5 +1,5 @@
 import { clearSessionCookie, deleteAdminSession } from "../_lib/auth";
-import { methodNotAllowed, ok } from "../_lib/http";
+import { methodNotAllowed, ok, serverError } from "../_lib/http";
 
 function getSessionToken(header: string | null) {
   if (!header) {
@@ -21,16 +21,24 @@ export default async function handler(request: Request) {
     return methodNotAllowed(["POST"]);
   }
 
-  await deleteAdminSession(getSessionToken(request.headers.get("cookie")));
+  try {
+    await deleteAdminSession(getSessionToken(request.headers.get("cookie")));
 
-  return ok(
-    {
-      success: true,
-    },
-    {
-      headers: {
-        "Set-Cookie": clearSessionCookie(),
+    return ok(
+      {
+        success: true,
       },
-    },
-  );
+      {
+        headers: {
+          "Set-Cookie": clearSessionCookie(),
+        },
+      },
+    );
+  } catch (error) {
+    return serverError(
+      error instanceof Error
+        ? `Falha ao encerrar sessao: ${error.message}`
+        : "Falha inesperada ao encerrar sessao.",
+    );
+  }
 }

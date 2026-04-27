@@ -40,7 +40,7 @@ export default function LoginPage() {
     } catch (error) {
       setErrorMessage(
         error instanceof Error
-          ? "Nao foi possivel autenticar com as credenciais informadas."
+          ? error.message
           : "Falha inesperada ao autenticar.",
       );
     } finally {

@@ -6,6 +6,13 @@ const SESSION_COOKIE_NAME = "dc_admin_session";
 const PASSWORD_ALGORITHM = "pbkdf2_sha256";
 const PASSWORD_ITERATIONS = 120000;
 const SESSION_DURATION_MS = 1000 * 60 * 60 * 24 * 7;
+const BOOTSTRAP_ADMIN_ID = "usr_admin_bootstrap";
+const BOOTSTRAP_ADMIN_NAME = "Administrador Inicial";
+const BOOTSTRAP_ADMIN_EMAIL = "admin@desafioscorrida.local";
+const BOOTSTRAP_ADMIN_PASSWORD_HASH =
+  "pbkdf2_sha256$120000$QxKOZWWGBcJLU6rUEQ6cWjQ=$GZaf0iE1O+Zes20m6q4DOasblRtYkWaX6sTbTC4XuDo=";
+
+let authBootstrapPromise: Promise<void> | null = null;
 
 type AdminUser = {
   id: string;
@@ -38,6 +45,65 @@ function toBase64(value: Buffer) {
 
 function fromBase64(value: string) {
   return Buffer.from(value, "base64");
+}
+
+async function runAuthBootstrap() {
+  const db = getDb();
+
+  await db`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      email TEXT NOT NULL UNIQUE,
+      password_hash TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'admin',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+
+  await db`
+    CREATE TABLE IF NOT EXISTS admin_sessions (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      session_token_hash TEXT NOT NULL UNIQUE,
+      expires_at TIMESTAMPTZ NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+
+  await db`
+    CREATE INDEX IF NOT EXISTS admin_sessions_user_id_idx
+    ON admin_sessions(user_id)
+  `;
+
+  await db`
+    CREATE INDEX IF NOT EXISTS admin_sessions_expires_at_idx
+    ON admin_sessions(expires_at)
+  `;
+
+  await db`
+    INSERT INTO users (id, name, email, password_hash, role)
+    VALUES (
+      ${BOOTSTRAP_ADMIN_ID},
+      ${BOOTSTRAP_ADMIN_NAME},
+      ${BOOTSTRAP_ADMIN_EMAIL},
+      ${BOOTSTRAP_ADMIN_PASSWORD_HASH},
+      'admin'
+    )
+    ON CONFLICT (email) DO NOTHING
+  `;
+}
+
+async function ensureAuthBootstrap() {
+  if (!authBootstrapPromise) {
+    authBootstrapPromise = runAuthBootstrap().catch((error) => {
+      authBootstrapPromise = null;
+      throw error;
+    });
+  }
+
+  await authBootstrapPromise;
 }
 
 export function hashPassword(password: string) {
@@ -140,6 +206,8 @@ export function clearSessionCookie() {
 }
 
 export async function createAdminSession(userId: string) {
+  await ensureAuthBootstrap();
+
   const token = randomBytes(32).toString("hex");
   const tokenHash = hashSessionToken(token);
   const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
@@ -162,6 +230,8 @@ export async function deleteAdminSession(sessionToken: string | null) {
     return;
   }
 
+  await ensureAuthBootstrap();
+
   const db = getDb();
   const tokenHash = hashSessionToken(sessionToken);
 
@@ -177,6 +247,8 @@ export async function getAuthenticatedAdmin(request: Request): Promise<AdminUser
   if (!token) {
     return null;
   }
+
+  await ensureAuthBootstrap();
 
   const db = getDb();
   const tokenHash = hashSessionToken(token);
@@ -211,6 +283,8 @@ export async function getAuthenticatedAdmin(request: Request): Promise<AdminUser
 }
 
 export async function authenticateAdmin(email: string, password: string) {
+  await ensureAuthBootstrap();
+
   const db = getDb();
   const rows = (await db`
     SELECT id, name, email, password_hash, role

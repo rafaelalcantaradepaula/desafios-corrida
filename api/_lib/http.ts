@@ -66,6 +66,13 @@ export function unauthorized(message = "Authentication required.") {
   });
 }
 
+export function serverError(message = "Internal server error.") {
+  return json(500, {
+    error: "server_error",
+    message,
+  });
+}
+
 export function notImplemented(message: string) {
   return json(501, {
     error: "not_implemented",
