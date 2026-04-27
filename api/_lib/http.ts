@@ -26,6 +26,20 @@ export function ok(body: JsonValue, init?: ResponseInit) {
   return json(200, body, init);
 }
 
+export function badRequest(message: string) {
+  return json(400, {
+    error: "bad_request",
+    message,
+  });
+}
+
+export function unauthorized(message = "Authentication required.") {
+  return json(401, {
+    error: "unauthorized",
+    message,
+  });
+}
+
 export function notImplemented(message: string) {
   return json(501, {
     error: "not_implemented",
@@ -47,4 +61,3 @@ export function methodNotAllowed(allowedMethods: string[]) {
     },
   );
 }
-

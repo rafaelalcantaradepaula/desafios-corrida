@@ -1,0 +1,238 @@
+import { createHash, pbkdf2Sync, randomBytes, timingSafeEqual } from "node:crypto";
+import { getDb } from "./db";
+import { getServerEnv } from "./env";
+
+const SESSION_COOKIE_NAME = "dc_admin_session";
+const PASSWORD_ALGORITHM = "pbkdf2_sha256";
+const PASSWORD_ITERATIONS = 120000;
+const SESSION_DURATION_MS = 1000 * 60 * 60 * 24 * 7;
+
+type AdminUser = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+};
+
+type SessionRecord = {
+  id: string;
+  user_id: string;
+  session_token_hash: string;
+  expires_at: string;
+  name: string;
+  email: string;
+  role: string;
+};
+
+function toBase64(value: Buffer) {
+  return value.toString("base64");
+}
+
+function fromBase64(value: string) {
+  return Buffer.from(value, "base64");
+}
+
+export function hashPassword(password: string) {
+  const salt = randomBytes(32);
+  const hash = pbkdf2Sync(password, salt, PASSWORD_ITERATIONS, 32, "sha256");
+
+  return [
+    PASSWORD_ALGORITHM,
+    String(PASSWORD_ITERATIONS),
+    toBase64(salt),
+    toBase64(hash),
+  ].join("$");
+}
+
+export function verifyPassword(password: string, storedHash: string) {
+  const [algorithm, iterationsValue, saltValue, hashValue] = storedHash.split("$");
+
+  if (
+    algorithm !== PASSWORD_ALGORITHM ||
+    !iterationsValue ||
+    !saltValue ||
+    !hashValue
+  ) {
+    return false;
+  }
+
+  const iterations = Number(iterationsValue);
+
+  if (!Number.isFinite(iterations) || iterations <= 0) {
+    return false;
+  }
+
+  const derivedHash = pbkdf2Sync(
+    password,
+    fromBase64(saltValue),
+    iterations,
+    32,
+    "sha256",
+  );
+
+  const expectedHash = fromBase64(hashValue);
+
+  return (
+    derivedHash.length === expectedHash.length &&
+    timingSafeEqual(derivedHash, expectedHash)
+  );
+}
+
+function hashSessionToken(token: string) {
+  const pepper = getServerEnv().authSecret;
+
+  return createHash("sha256")
+    .update(`${token}:${pepper}`)
+    .digest("hex");
+}
+
+function parseCookies(header: string | null) {
+  const cookieMap = new Map<string, string>();
+
+  if (!header) {
+    return cookieMap;
+  }
+
+  for (const item of header.split(";")) {
+    const [rawName, ...rawValue] = item.trim().split("=");
+    if (!rawName || rawValue.length === 0) {
+      continue;
+    }
+
+    cookieMap.set(rawName, decodeURIComponent(rawValue.join("=")));
+  }
+
+  return cookieMap;
+}
+
+function buildSessionCookie(token: string, expiresAt: Date) {
+  const authUrl = getServerEnv().authUrl;
+  const shouldUseSecureCookie = authUrl.startsWith("https://");
+  const segments = [
+    `${SESSION_COOKIE_NAME}=${encodeURIComponent(token)}`,
+    "Path=/",
+    "HttpOnly",
+    "SameSite=Lax",
+    `Expires=${expiresAt.toUTCString()}`,
+    `Max-Age=${Math.floor((expiresAt.getTime() - Date.now()) / 1000)}`,
+  ];
+
+  if (shouldUseSecureCookie) {
+    segments.push("Secure");
+  }
+
+  return segments.join("; ");
+}
+
+export function clearSessionCookie() {
+  const authUrl = getServerEnv().authUrl;
+  const secureSegment = authUrl.startsWith("https://") ? "; Secure" : "";
+
+  return `${SESSION_COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax${secureSegment}; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+}
+
+export async function createAdminSession(userId: string) {
+  const token = randomBytes(32).toString("hex");
+  const tokenHash = hashSessionToken(token);
+  const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
+  const db = getDb();
+
+  await db`
+    INSERT INTO admin_sessions (id, user_id, session_token_hash, expires_at)
+    VALUES (${crypto.randomUUID()}, ${userId}, ${tokenHash}, ${expiresAt.toISOString()})
+  `;
+
+  return {
+    token,
+    expiresAt,
+    cookie: buildSessionCookie(token, expiresAt),
+  };
+}
+
+export async function deleteAdminSession(sessionToken: string | null) {
+  if (!sessionToken) {
+    return;
+  }
+
+  const db = getDb();
+  const tokenHash = hashSessionToken(sessionToken);
+
+  await db`
+    DELETE FROM admin_sessions
+    WHERE session_token_hash = ${tokenHash}
+  `;
+}
+
+export async function getAuthenticatedAdmin(request: Request): Promise<AdminUser | null> {
+  const token = parseCookies(request.headers.get("cookie")).get(SESSION_COOKIE_NAME);
+
+  if (!token) {
+    return null;
+  }
+
+  const db = getDb();
+  const tokenHash = hashSessionToken(token);
+  const rows = await db<SessionRecord[]>`
+    SELECT
+      admin_sessions.id,
+      admin_sessions.user_id,
+      admin_sessions.session_token_hash,
+      admin_sessions.expires_at,
+      users.name,
+      users.email,
+      users.role
+    FROM admin_sessions
+    INNER JOIN users ON users.id = admin_sessions.user_id
+    WHERE admin_sessions.session_token_hash = ${tokenHash}
+      AND admin_sessions.expires_at > NOW()
+    LIMIT 1
+  `;
+
+  const session = rows[0];
+
+  if (!session) {
+    return null;
+  }
+
+  return {
+    id: session.user_id,
+    name: session.name,
+    email: session.email,
+    role: session.role,
+  };
+}
+
+export async function authenticateAdmin(email: string, password: string) {
+  const db = getDb();
+  const rows = await db<
+    Array<{
+      id: string;
+      name: string;
+      email: string;
+      password_hash: string;
+      role: string;
+    }>
+  >`
+    SELECT id, name, email, password_hash, role
+    FROM users
+    WHERE email = ${email}
+    LIMIT 1
+  `;
+
+  const user = rows[0];
+
+  if (!user || user.role !== "admin") {
+    return null;
+  }
+
+  if (!verifyPassword(password, user.password_hash)) {
+    return null;
+  }
+
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+  };
+}

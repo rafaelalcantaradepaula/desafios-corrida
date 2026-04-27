@@ -6,7 +6,10 @@ export function createApiUrl(path: string) {
 }
 
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(createApiUrl(path), init);
+  const response = await fetch(createApiUrl(path), {
+    credentials: "include",
+    ...init,
+  });
 
   if (!response.ok) {
     throw new Error(`API request failed with status ${response.status}`);
@@ -14,4 +17,3 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
 
   return (await response.json()) as T;
 }
-

@@ -5,6 +5,8 @@ Este repositório centraliza o plano do MVP para o site de desafios de corrida.
 Arquivos:
 - `docs/fase-1-descoberta-definicao.md`: decisoes funcionais e textos-base fechados na fase 1.
 - `docs/fase-2-fundacao-tecnica.md`: scaffold tecnico inicial do app, da API e do ambiente.
+- `docs/fase-3-banco-e-autenticacao.md`: schema, seed do admin e sessao administrativa.
+- `docs/bootstrap-db-vercel.md`: guia operacional para subir banco e bootstrapar o admin na Vercel.
 - `docs/plano-implantacao.md`: fases, cronograma, fluxo de entrega e publicacao.
 - `docs/arquitetura-produto.md`: arquitetura recomendada, autenticacao, modelo de dados e diretrizes de interface.
 - `docs/backlog-mvp.md`: backlog inicial com entregas tecnicas por frente.
