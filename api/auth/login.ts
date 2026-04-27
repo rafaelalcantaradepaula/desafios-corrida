@@ -1,11 +1,11 @@
-import { authenticateAdmin, createAdminSession } from "../_lib/auth";
+import { authenticateAdmin, createAdminSession } from "../_lib/auth.js";
 import {
   badRequest,
   methodNotAllowed,
   ok,
   serverError,
   unauthorized,
-} from "../_lib/http";
+} from "../_lib/http.js";
 
 export default async function handler(request: Request) {
   if (request.method !== "POST") {

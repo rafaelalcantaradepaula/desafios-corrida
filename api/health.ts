@@ -1,5 +1,5 @@
-import { getServerEnv } from "./_lib/env";
-import { methodNotAllowed, ok } from "./_lib/http";
+import { getServerEnv } from "./_lib/env.js";
+import { methodNotAllowed, ok } from "./_lib/http.js";
 
 export default async function handler(request: Request) {
   if (request.method !== "GET") {
@@ -16,4 +16,3 @@ export default async function handler(request: Request) {
     timestamp: new Date().toISOString(),
   });
 }
-

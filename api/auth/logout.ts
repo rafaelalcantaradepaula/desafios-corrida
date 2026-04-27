@@ -1,5 +1,5 @@
-import { clearSessionCookie, deleteAdminSession } from "../_lib/auth";
-import { methodNotAllowed, ok, serverError } from "../_lib/http";
+import { clearSessionCookie, deleteAdminSession } from "../_lib/auth.js";
+import { methodNotAllowed, ok, serverError } from "../_lib/http.js";
 
 function getSessionToken(header: string | null) {
   if (!header) {

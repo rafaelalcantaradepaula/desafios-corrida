@@ -1,6 +1,6 @@
 import { createHash, pbkdf2Sync, randomBytes, timingSafeEqual } from "node:crypto";
-import { getDb } from "./db";
-import { getServerEnv } from "./env";
+import { getDb } from "./db.js";
+import { getServerEnv } from "./env.js";
 
 const SESSION_COOKIE_NAME = "dc_admin_session";
 const PASSWORD_ALGORITHM = "pbkdf2_sha256";

@@ -1,5 +1,5 @@
-import { getAuthenticatedAdmin } from "../_lib/auth";
-import { methodNotAllowed, ok, serverError, unauthorized } from "../_lib/http";
+import { getAuthenticatedAdmin } from "../_lib/auth.js";
+import { methodNotAllowed, ok, serverError, unauthorized } from "../_lib/http.js";
 
 export default async function handler(request: Request) {
   if (request.method !== "GET") {
