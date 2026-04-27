@@ -1,5 +1,6 @@
 import { createHmac, pbkdf2Sync, randomBytes, timingSafeEqual } from "node:crypto";
 import { getServerEnv } from "./env.js";
+import type { ApiRequest } from "./http.js";
 
 const SESSION_COOKIE_NAME = "dc_admin_session";
 const PASSWORD_ALGORITHM = "pbkdf2_sha256";
@@ -118,6 +119,16 @@ function parseCookies(header: string | null) {
   return cookieMap;
 }
 
+function getCookieHeader(request: ApiRequest) {
+  const headerValue = request.headers.cookie;
+
+  if (Array.isArray(headerValue)) {
+    return headerValue.join("; ");
+  }
+
+  return headerValue ?? null;
+}
+
 function buildSessionCookie(token: string, expiresAt: Date) {
   const authUrl = getServerEnv().authUrl;
   const shouldUseSecureCookie = authUrl.startsWith("https://");
@@ -205,8 +216,8 @@ export async function deleteAdminSession(sessionToken: string | null) {
   void sessionToken;
 }
 
-export async function getAuthenticatedAdmin(request: Request): Promise<AdminUser | null> {
-  const token = parseCookies(request.headers.get("cookie")).get(SESSION_COOKIE_NAME);
+export async function getAuthenticatedAdmin(request: ApiRequest): Promise<AdminUser | null> {
+  const token = parseCookies(getCookieHeader(request)).get(SESSION_COOKIE_NAME);
 
   if (!token) {
     return null;

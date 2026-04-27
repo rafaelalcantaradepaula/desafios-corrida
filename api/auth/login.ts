@@ -1,19 +1,26 @@
 import { authenticateAdmin, createAdminSession } from "../_lib/auth.js";
 import {
+  type ApiRequest,
+  type ApiResponse,
   badRequest,
   methodNotAllowed,
   ok,
+  readJsonBody,
   serverError,
   unauthorized,
 } from "../_lib/http.js";
 
-export default async function handler(request: Request) {
+export default async function handler(request: ApiRequest, response: ApiResponse) {
   if (request.method !== "POST") {
-    return methodNotAllowed(["POST"]);
+    methodNotAllowed(response, ["POST"]);
+    return;
   }
 
   try {
-    const body = (await request.json().catch(() => null)) as
+    const body = (await readJsonBody<{
+      email?: string;
+      password?: string;
+    }>(request)) as
       | { email?: string; password?: string }
       | null;
 
@@ -21,18 +28,21 @@ export default async function handler(request: Request) {
     const password = body?.password?.trim();
 
     if (!email || !password) {
-      return badRequest("Email and password are required.");
+      badRequest(response, "Email and password are required.");
+      return;
     }
 
     const user = await authenticateAdmin(email, password);
 
     if (!user) {
-      return unauthorized("Credenciais administrativas invalidas.");
+      unauthorized(response, "Credenciais administrativas invalidas.");
+      return;
     }
 
     const session = await createAdminSession(user);
 
-    return ok(
+    ok(
+      response,
       {
         user: {
           id: user.id,
@@ -42,16 +52,17 @@ export default async function handler(request: Request) {
         },
       },
       {
-        headers: {
-          "Set-Cookie": session.cookie,
-        },
+        "Set-Cookie": session.cookie,
       },
     );
+    return;
   } catch (error) {
-    return serverError(
+    serverError(
+      response,
       error instanceof Error
         ? `Falha ao autenticar no servidor: ${error.message}`
         : "Falha inesperada ao autenticar no servidor.",
     );
+    return;
   }
 }

@@ -1,5 +1,11 @@
 import { clearSessionCookie, deleteAdminSession } from "../_lib/auth.js";
-import { methodNotAllowed, ok, serverError } from "../_lib/http.js";
+import {
+  type ApiRequest,
+  type ApiResponse,
+  methodNotAllowed,
+  ok,
+  serverError,
+} from "../_lib/http.js";
 
 function getSessionToken(header: string | null) {
   if (!header) {
@@ -16,29 +22,36 @@ function getSessionToken(header: string | null) {
   return decodeURIComponent(entry.slice("dc_admin_session=".length));
 }
 
-export default async function handler(request: Request) {
+export default async function handler(request: ApiRequest, response: ApiResponse) {
   if (request.method !== "POST") {
-    return methodNotAllowed(["POST"]);
+    methodNotAllowed(response, ["POST"]);
+    return;
   }
 
   try {
-    await deleteAdminSession(getSessionToken(request.headers.get("cookie")));
+    const cookieHeader = Array.isArray(request.headers.cookie)
+      ? request.headers.cookie.join("; ")
+      : request.headers.cookie ?? null;
 
-    return ok(
+    await deleteAdminSession(getSessionToken(cookieHeader));
+
+    ok(
+      response,
       {
         success: true,
       },
       {
-        headers: {
-          "Set-Cookie": clearSessionCookie(),
-        },
+        "Set-Cookie": clearSessionCookie(),
       },
     );
+    return;
   } catch (error) {
-    return serverError(
+    serverError(
+      response,
       error instanceof Error
         ? `Falha ao encerrar sessao: ${error.message}`
         : "Falha inesperada ao encerrar sessao.",
     );
+    return;
   }
 }

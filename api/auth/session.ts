@@ -1,26 +1,38 @@
 import { getAuthenticatedAdmin } from "../_lib/auth.js";
-import { methodNotAllowed, ok, serverError, unauthorized } from "../_lib/http.js";
+import {
+  type ApiRequest,
+  type ApiResponse,
+  methodNotAllowed,
+  ok,
+  serverError,
+  unauthorized,
+} from "../_lib/http.js";
 
-export default async function handler(request: Request) {
+export default async function handler(request: ApiRequest, response: ApiResponse) {
   if (request.method !== "GET") {
-    return methodNotAllowed(["GET"]);
+    methodNotAllowed(response, ["GET"]);
+    return;
   }
 
   try {
     const user = await getAuthenticatedAdmin(request);
 
     if (!user) {
-      return unauthorized();
+      unauthorized(response);
+      return;
     }
 
-    return ok({
+    ok(response, {
       user,
     });
+    return;
   } catch (error) {
-    return serverError(
+    serverError(
+      response,
       error instanceof Error
         ? `Falha ao recuperar sessao: ${error.message}`
         : "Falha inesperada ao recuperar sessao.",
     );
+    return;
   }
 }
