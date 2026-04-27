@@ -1,4 +1,6 @@
-import { Link, useSearchParams } from "react-router-dom";
+import { FormEvent, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { createChallenge } from "@/lib/challenges";
 import { useAuthSession } from "@/lib/auth-context";
 
 function getIntentMessage(intent: string | null) {
@@ -15,9 +17,42 @@ function getIntentMessage(intent: string | null) {
 }
 
 export default function AdminPage() {
+  const navigate = useNavigate();
   const { user } = useAuthSession();
   const [searchParams] = useSearchParams();
   const intent = searchParams.get("intent");
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [type, setType] = useState<"pace" | "time">("pace");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [feedback, setFeedback] = useState("");
+
+  async function handleCreateChallenge(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setIsSubmitting(true);
+    setFeedback("");
+
+    try {
+      const challenge = await createChallenge({
+        title,
+        description,
+        type,
+      });
+
+      setFeedback("Desafio criado com sucesso.");
+      setTitle("");
+      setDescription("");
+      navigate(`/challenges/${challenge.id}`);
+    } catch (error) {
+      setFeedback(
+        error instanceof Error
+          ? error.message
+          : "Nao foi possivel criar o desafio.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
 
   return (
     <div className="screen-stack">
@@ -42,16 +77,52 @@ export default function AdminPage() {
             <p className="card-kicker">Desafios</p>
             <h3 className="challenge-card-title">Criar e publicar desafios</h3>
             <p className="challenge-card-copy">
-              O fluxo visual esta autenticado. O formulario persistente entra na fase 4.
+              O fluxo real da fase 4 ja cria desafios ativos via API.
             </p>
-            <div className="actions-row">
-              <Link className="button button-secondary" to="/">
-                Voltar para a home
-              </Link>
-              <Link className="button button-primary" to="/challenges/orla-5k">
-                Ver desafio
-              </Link>
-            </div>
+            <form className="form-stack" onSubmit={handleCreateChallenge}>
+              <label className="field-group">
+                <span className="field-label">Titulo</span>
+                <input
+                  className="field-input"
+                  onChange={(event) => setTitle(event.target.value)}
+                  placeholder="Ex.: Corrida Central 10K"
+                  value={title}
+                />
+              </label>
+
+              <label className="field-group">
+                <span className="field-label">Descricao</span>
+                <textarea
+                  className="field-input field-textarea"
+                  onChange={(event) => setDescription(event.target.value)}
+                  placeholder="Descreva as regras e o contexto do desafio."
+                  value={description}
+                />
+              </label>
+
+              <label className="field-group">
+                <span className="field-label">Tipo</span>
+                <select
+                  className="field-input"
+                  onChange={(event) => setType(event.target.value as "pace" | "time")}
+                  value={type}
+                >
+                  <option value="pace">Pace medio</option>
+                  <option value="time">Tempo acumulado</option>
+                </select>
+              </label>
+
+              <div className="actions-row">
+                <Link className="button button-secondary" to="/">
+                  Voltar para a home
+                </Link>
+                <button className="button button-primary" disabled={isSubmitting} type="submit">
+                  {isSubmitting ? "Criando..." : "Criar desafio"}
+                </button>
+              </div>
+            </form>
+
+            {feedback ? <p className="support-text">{feedback}</p> : null}
           </article>
 
           <article className="challenge-card">

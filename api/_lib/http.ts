@@ -75,6 +75,14 @@ export function getHeader(request: ApiRequest, name: string) {
   return headerValue ?? null;
 }
 
+export function getRequestUrl(request: ApiRequest) {
+  const hostHeader = getHeader(request, "host") ?? "localhost";
+  const protocol =
+    request.headers["x-forwarded-proto"] === "https" ? "https" : "http";
+
+  return new URL(request.url ?? "/", `${protocol}://${hostHeader}`);
+}
+
 export function json(
   response: ApiResponse,
   status: number,
@@ -100,6 +108,13 @@ export function badRequest(response: ApiResponse, message: string) {
 export function unauthorized(response: ApiResponse, message = "Authentication required.") {
   json(response, 401, {
     error: "unauthorized",
+    message,
+  });
+}
+
+export function notFound(response: ApiResponse, message = "Resource not found.") {
+  json(response, 404, {
+    error: "not_found",
     message,
   });
 }

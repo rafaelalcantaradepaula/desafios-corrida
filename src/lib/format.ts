@@ -1,4 +1,4 @@
-import type { ChallengeType } from "./types";
+import type { ChallengeType, TimeParts } from "./types";
 
 function formatClockUnit(value: number) {
   return value.toString().padStart(2, "0");
@@ -27,3 +27,31 @@ export function formatResultByType(type: ChallengeType, seconds: number) {
   return type === "pace" ? formatPace(seconds) : formatDuration(seconds);
 }
 
+export function secondsToTimeParts(totalSeconds: number): TimeParts {
+  const normalized = Math.max(0, Math.floor(totalSeconds));
+
+  return {
+    hours: formatClockUnit(Math.floor(normalized / 3600)),
+    minutes: formatClockUnit(Math.floor((normalized % 3600) / 60)),
+    seconds: formatClockUnit(normalized % 60),
+  };
+}
+
+export function timePartsToSeconds(parts: TimeParts) {
+  const hours = Number(parts.hours || "0");
+  const minutes = Number(parts.minutes || "0");
+  const seconds = Number(parts.seconds || "0");
+
+  if (
+    !Number.isFinite(hours) ||
+    !Number.isFinite(minutes) ||
+    !Number.isFinite(seconds) ||
+    hours < 0 ||
+    minutes < 0 ||
+    seconds < 0
+  ) {
+    return null;
+  }
+
+  return Math.floor(hours * 3600 + minutes * 60 + seconds);
+}

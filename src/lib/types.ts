@@ -36,6 +36,12 @@ export type Participant = {
   resultLabel: string;
 };
 
+export type TimeParts = {
+  hours: string;
+  minutes: string;
+  seconds: string;
+};
+
 export type TeamDetail = {
   id: string;
   challengeId: string;
@@ -44,4 +50,3 @@ export type TeamDetail = {
   teamName: string;
   participants: Participant[];
 };
-

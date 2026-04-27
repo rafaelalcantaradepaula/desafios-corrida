@@ -44,7 +44,9 @@ a {
 }
 
 button,
-input {
+input,
+select,
+textarea {
   font: inherit;
 }
 
@@ -235,10 +237,17 @@ input {
 }
 
 .actions-row,
-.challenge-card-meta {
+.challenge-card-meta,
+.inline-form,
+.compact-form-grid {
   display: flex;
-  flex-wrap: wrap;
   gap: 12px;
+}
+
+.actions-row,
+.challenge-card-meta,
+.inline-form {
+  flex-wrap: wrap;
 }
 
 .actions-row {
@@ -428,6 +437,39 @@ input {
   box-shadow: 0 0 0 3px rgba(113, 216, 182, 0.14);
 }
 
+.field-input-compact {
+  min-height: 42px;
+  padding: 0 12px;
+}
+
+.field-textarea {
+  min-height: 120px;
+  padding: 12px 14px;
+  resize: vertical;
+}
+
+.compact-form-grid {
+  align-items: center;
+}
+
+.compact-form-grid .field-input-compact {
+  width: 72px;
+  text-align: center;
+}
+
+.button-compact {
+  min-height: 42px;
+  padding: 0 14px;
+}
+
+.roster-side {
+  align-items: flex-start;
+}
+
+.roster-side .ranking-side {
+  width: 100%;
+}
+
 .support-text {
   font-size: 0.92rem;
 }
@@ -499,5 +541,9 @@ input {
 
   .ranking-side {
     align-items: flex-start;
+  }
+
+  .compact-form-grid {
+    flex-wrap: wrap;
   }
 }

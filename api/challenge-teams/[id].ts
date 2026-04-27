@@ -1,4 +1,4 @@
-import { getChallengeDetailById } from "../_lib/challenges.js";
+import { getTeamDetailById } from "../_lib/challenges.js";
 import {
   type ApiRequest,
   type ApiResponse,
@@ -17,29 +17,29 @@ export default async function handler(request: ApiRequest, response: ApiResponse
 
   try {
     const segments = getRequestUrl(request).pathname.split("/").filter(Boolean);
-    const challengeId = segments.at(-1);
+    const challengeTeamId = segments.at(-1);
 
-    if (!challengeId) {
-      serverError(response, "Challenge id not provided.");
+    if (!challengeTeamId) {
+      serverError(response, "Challenge team id not provided.");
       return;
     }
 
-    const detail = await getChallengeDetailById(challengeId);
+    const team = await getTeamDetailById(challengeTeamId);
 
-    if (!detail) {
-      notFound(response, "Desafio nao encontrado.");
+    if (!team) {
+      notFound(response, "Equipe nao encontrada.");
       return;
     }
 
     ok(response, {
-      data: detail,
+      data: team,
     });
   } catch (error) {
     serverError(
       response,
       error instanceof Error
-        ? `Falha ao carregar desafio: ${error.message}`
-        : "Falha inesperada ao carregar desafio.",
+        ? `Falha ao carregar equipe: ${error.message}`
+        : "Falha inesperada ao carregar equipe.",
     );
   }
 }
