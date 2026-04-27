@@ -24,6 +24,14 @@ type SessionRecord = {
   role: string;
 };
 
+type AdminCredentialRecord = {
+  id: string;
+  name: string;
+  email: string;
+  password_hash: string;
+  role: string;
+};
+
 function toBase64(value: Buffer) {
   return value.toString("base64");
 }
@@ -172,7 +180,7 @@ export async function getAuthenticatedAdmin(request: Request): Promise<AdminUser
 
   const db = getDb();
   const tokenHash = hashSessionToken(token);
-  const rows = await db<SessionRecord[]>`
+  const rows = (await db`
     SELECT
       admin_sessions.id,
       admin_sessions.user_id,
@@ -186,7 +194,7 @@ export async function getAuthenticatedAdmin(request: Request): Promise<AdminUser
     WHERE admin_sessions.session_token_hash = ${tokenHash}
       AND admin_sessions.expires_at > NOW()
     LIMIT 1
-  `;
+  `) as SessionRecord[];
 
   const session = rows[0];
 
@@ -204,20 +212,12 @@ export async function getAuthenticatedAdmin(request: Request): Promise<AdminUser
 
 export async function authenticateAdmin(email: string, password: string) {
   const db = getDb();
-  const rows = await db<
-    Array<{
-      id: string;
-      name: string;
-      email: string;
-      password_hash: string;
-      role: string;
-    }>
-  >`
+  const rows = (await db`
     SELECT id, name, email, password_hash, role
     FROM users
     WHERE email = ${email}
     LIMIT 1
-  `;
+  `) as AdminCredentialRecord[];
 
   const user = rows[0];
 
