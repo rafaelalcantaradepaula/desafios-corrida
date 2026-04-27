@@ -20,6 +20,9 @@ const hourOptions = Array.from({ length: 24 }, (_, index) =>
 const minuteSecondOptions = Array.from({ length: 60 }, (_, index) =>
   index.toString().padStart(2, "0"),
 );
+const paceMinuteOptions = Array.from({ length: 13 }, (_, index) =>
+  index.toString().padStart(2, "0"),
+);
 
 export default function TeamPage() {
   const { challengeTeamId = "" } = useParams();
@@ -220,6 +223,8 @@ export default function TeamPage() {
   const adminActionHref = user
     ? `/admin?intent=participant-add&challengeTeamId=${encodeURIComponent(team.id)}`
     : `/login?redirect=${encodeURIComponent(`/admin?intent=participant-add&challengeTeamId=${team.id}`)}`;
+  const minuteOptions =
+    team.challengeType === "pace" ? paceMinuteOptions : minuteSecondOptions;
 
   return (
     <div className="screen-stack">
@@ -281,19 +286,21 @@ export default function TeamPage() {
                   <strong className="roster-result">{participant.resultLabel}</strong>
 
                   <div className="compact-form-grid">
-                    <select
-                      className="field-input field-input-compact"
-                      onChange={(event) =>
-                        updateResultField(participant.id, "hours", event.target.value)
-                      }
-                      value={parts.hours}
-                    >
-                      {hourOptions.map((option) => (
-                        <option key={`hour-${option}`} value={option}>
-                          {option}h
-                        </option>
-                      ))}
-                    </select>
+                    {team.challengeType === "time" ? (
+                      <select
+                        className="field-input field-input-compact"
+                        onChange={(event) =>
+                          updateResultField(participant.id, "hours", event.target.value)
+                        }
+                        value={parts.hours}
+                      >
+                        {hourOptions.map((option) => (
+                          <option key={`hour-${option}`} value={option}>
+                            {option}h
+                          </option>
+                        ))}
+                      </select>
+                    ) : null}
                     <select
                       className="field-input field-input-compact"
                       onChange={(event) =>
@@ -301,7 +308,7 @@ export default function TeamPage() {
                       }
                       value={parts.minutes}
                     >
-                      {minuteSecondOptions.map((option) => (
+                      {minuteOptions.map((option) => (
                         <option key={`minute-${option}`} value={option}>
                           {option}m
                         </option>
