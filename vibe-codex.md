@@ -9,10 +9,13 @@ Crie um site para gerenciar desafios de corrida conforme especificação abaixo.
 - Site deve ser publico permitindo visualização e pedir autenticação para qualquer cadastro de dados. 
 
 # Arquitetura
-- Website em react hospedado na Vercell
+- Website em react e vite hospedado na Vercell
 - Banco de dados neon-db/postgress
 - Sugira a melhor formma de autenticação do site.
 - visualização otimizada para dispositivo movel
+- me faça perguntas sobre a interface
+- crie telas enxutas, com poucos elementos visuais que se assemelham a aplicativos mobile.
+- Concentre todas as configurações de classes em um arquivo global de css e utilize apenas o classname ao criar os componentes
 
 # Tela principal
 - lista desafios ativos e botao para criar um novo desafio.

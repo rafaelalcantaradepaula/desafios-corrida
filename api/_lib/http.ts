@@ -6,11 +6,37 @@ type JsonValue =
   | JsonValue[]
   | { [key: string]: JsonValue };
 
+function normalizeHeaders(init?: HeadersInit) {
+  const normalized: Record<string, string> = {};
+
+  if (!init) {
+    return normalized;
+  }
+
+  if (init instanceof Headers) {
+    init.forEach((value, key) => {
+      normalized[key] = value;
+    });
+
+    return normalized;
+  }
+
+  if (Array.isArray(init)) {
+    for (const [key, value] of init) {
+      normalized[key] = value;
+    }
+
+    return normalized;
+  }
+
+  return { ...init };
+}
+
 function createHeaders(init?: HeadersInit) {
   return new Headers({
     "content-type": "application/json; charset=utf-8",
     "cache-control": "no-store",
-    ...Object.fromEntries(new Headers(init).entries()),
+    ...normalizeHeaders(init),
   });
 }
 
