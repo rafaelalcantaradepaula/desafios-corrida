@@ -7,6 +7,7 @@ Arquivos:
 - `docs/fase-2-fundacao-tecnica.md`: scaffold tecnico inicial do app, da API e do ambiente.
 - `docs/fase-3-banco-e-autenticacao.md`: schema, seed do admin e sessao administrativa.
 - `docs/fase-4-regras-e-api.md`: endpoints do MVP, telas conectadas ao backend e fluxo de cadastro de dados.
+- `docs/fase-5-telas-mvp.md`: refinamentos das telas, do painel administrativo e dos feedbacks do MVP.
 - `docs/bootstrap-db-vercel.md`: guia operacional para subir banco e bootstrapar o admin na Vercel.
 - `docs/plano-implantacao.md`: fases, cronograma, fluxo de entrega e publicacao.
 - `docs/arquitetura-produto.md`: arquitetura recomendada, autenticacao, modelo de dados e diretrizes de interface.
