@@ -1,32 +1,32 @@
 import { FormEvent, useEffect, useState } from "react";
-import { getAdminSession, loginAdmin, logoutAdmin } from "@/lib/auth";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { loginAdmin, logoutAdmin } from "@/lib/auth";
+import { useAuthSession } from "@/lib/auth-context";
 
 export default function LoginPage() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { isLoading: isSessionLoading, setAuthenticatedUser, user } = useAuthSession();
   const [email, setEmail] = useState("admin@desafioscorrida.local");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [sessionMessage, setSessionMessage] = useState("Verificando sessao...");
+  const redirectTo = searchParams.get("redirect") || "/admin";
 
   useEffect(() => {
-    let isMounted = true;
+    if (isSessionLoading) {
+      setSessionMessage("Verificando sessao...");
+      return;
+    }
 
-    void getAdminSession()
-      .then(({ user }) => {
-        if (isMounted) {
-          setSessionMessage(`Sessao ativa para ${user.email}.`);
-        }
-      })
-      .catch(() => {
-        if (isMounted) {
-          setSessionMessage("Nenhuma sessao administrativa ativa.");
-        }
-      });
+    if (user) {
+      setSessionMessage(`Sessao ativa para ${user.email}.`);
+      return;
+    }
 
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+    setSessionMessage("Nenhuma sessao administrativa ativa.");
+  }, [isSessionLoading, user]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -35,8 +35,10 @@ export default function LoginPage() {
 
     try {
       const response = await loginAdmin(email, password);
+      setAuthenticatedUser(response.user);
       setSessionMessage(`Sessao iniciada para ${response.user.email}.`);
       setPassword("");
+      navigate(redirectTo, { replace: true });
     } catch (error) {
       setErrorMessage(
         error instanceof Error
@@ -54,6 +56,7 @@ export default function LoginPage() {
 
     try {
       await logoutAdmin();
+      setAuthenticatedUser(null);
       setSessionMessage("Sessao encerrada.");
     } catch {
       setErrorMessage("Nao foi possivel encerrar a sessao atual.");
@@ -116,6 +119,12 @@ export default function LoginPage() {
         </p>
 
         <p className="support-text">{sessionMessage}</p>
+
+        {user ? (
+          <Link className="button button-secondary" to={redirectTo}>
+            Ir para area administrativa
+          </Link>
+        ) : null}
 
         {errorMessage ? (
           <p className="support-text support-text-error">{errorMessage}</p>

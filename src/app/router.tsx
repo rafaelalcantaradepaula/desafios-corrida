@@ -1,5 +1,7 @@
 import { createBrowserRouter } from "react-router-dom";
+import RequireAdmin from "@/components/RequireAdmin";
 import AppShell from "@/layouts/AppShell";
+import AdminPage from "@/pages/AdminPage";
 import ChallengePage from "@/pages/ChallengePage";
 import HomePage from "@/pages/HomePage";
 import LoginPage from "@/pages/LoginPage";
@@ -28,10 +30,17 @@ export const router = createBrowserRouter([
         element: <LoginPage />,
       },
       {
+        path: "admin",
+        element: (
+          <RequireAdmin>
+            <AdminPage />
+          </RequireAdmin>
+        ),
+      },
+      {
         path: "*",
         element: <NotFoundPage />,
       },
     ],
   },
 ]);
-

@@ -1,8 +1,14 @@
 import { Link } from "react-router-dom";
+import { useAuthSession } from "@/lib/auth-context";
 import ChallengeCard from "@/components/ChallengeCard";
 import { mockChallenges } from "@/mocks/dashboard";
 
 export default function HomePage() {
+  const { user } = useAuthSession();
+  const adminActionHref = user
+    ? "/admin?intent=challenge-create"
+    : `/login?redirect=${encodeURIComponent("/admin?intent=challenge-create")}`;
+
   return (
     <div className="screen-stack">
       <section className="hero-card">
@@ -19,7 +25,7 @@ export default function HomePage() {
           <Link className="button button-primary" to="/challenges/orla-5k">
             Ver desafio em destaque
           </Link>
-          <Link className="button button-secondary" to="/login">
+          <Link className="button button-secondary" to={adminActionHref}>
             Novo desafio
           </Link>
         </div>
@@ -44,4 +50,3 @@ export default function HomePage() {
     </div>
   );
 }
-

@@ -1,10 +1,14 @@
 import { NavLink, Outlet } from "react-router-dom";
+import { useAuthSession } from "@/lib/auth-context";
 
 function navClassName(isActive: boolean) {
   return isActive ? "bottom-nav-link bottom-nav-link-active" : "bottom-nav-link";
 }
 
 export default function AppShell() {
+  const { user } = useAuthSession();
+  const adminTarget = user ? "/admin" : "/login";
+
   return (
     <div className="app-shell">
       <div className="ambient-orb ambient-orb-left" />
@@ -13,11 +17,13 @@ export default function AppShell() {
       <div className="app-frame">
         <header className="topbar">
           <div>
-            <p className="eyebrow">Fase 2</p>
+            <p className="eyebrow">{user ? "Admin ativo" : "Modo publico"}</p>
             <h1 className="brand-title">Desafios de corrida</h1>
           </div>
 
-          <div className="status-pill">Base tecnica pronta</div>
+          <div className="status-pill">
+            {user ? "Sessao administrativa ativa" : "Base tecnica pronta"}
+          </div>
         </header>
 
         <main className="screen">
@@ -34,7 +40,7 @@ export default function AppShell() {
           >
             Desafio
           </NavLink>
-          <NavLink className={({ isActive }) => navClassName(isActive)} to="/login">
+          <NavLink className={({ isActive }) => navClassName(isActive)} to={adminTarget}>
             Admin
           </NavLink>
         </nav>
@@ -42,4 +48,3 @@ export default function AppShell() {
     </div>
   );
 }
-

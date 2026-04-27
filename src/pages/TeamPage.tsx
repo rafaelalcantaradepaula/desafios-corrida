@@ -1,10 +1,12 @@
 import { Link, useParams } from "react-router-dom";
+import { useAuthSession } from "@/lib/auth-context";
 import { formatChallengeTypeLabel } from "@/lib/format";
 import { getMockTeamDetail } from "@/mocks/dashboard";
 
 export default function TeamPage() {
   const { challengeTeamId = "" } = useParams();
   const team = getMockTeamDetail(challengeTeamId);
+  const { user } = useAuthSession();
 
   if (!team) {
     return (
@@ -19,6 +21,10 @@ export default function TeamPage() {
       </section>
     );
   }
+
+  const adminActionHref = user
+    ? `/admin?intent=participant-add&challengeTeamId=${encodeURIComponent(team.id)}`
+    : `/login?redirect=${encodeURIComponent(`/admin?intent=participant-add&challengeTeamId=${team.id}`)}`;
 
   return (
     <div className="screen-stack">
@@ -37,7 +43,7 @@ export default function TeamPage() {
             <h3 className="section-title">Lista simples de participantes</h3>
           </div>
 
-          <Link className="button button-secondary" to="/login">
+          <Link className="button button-secondary" to={adminActionHref}>
             Adicionar participante
           </Link>
         </div>
@@ -87,4 +93,3 @@ export default function TeamPage() {
     </div>
   );
 }
-

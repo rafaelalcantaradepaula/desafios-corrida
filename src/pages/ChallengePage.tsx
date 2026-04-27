@@ -1,4 +1,5 @@
 import { Link, useParams } from "react-router-dom";
+import { useAuthSession } from "@/lib/auth-context";
 import MetricChip from "@/components/MetricChip";
 import { formatChallengeTypeLabel } from "@/lib/format";
 import { getMockChallengeDetail } from "@/mocks/dashboard";
@@ -6,6 +7,7 @@ import { getMockChallengeDetail } from "@/mocks/dashboard";
 export default function ChallengePage() {
   const { challengeId = "" } = useParams();
   const challenge = getMockChallengeDetail(challengeId);
+  const { user } = useAuthSession();
 
   if (!challenge) {
     return (
@@ -21,6 +23,10 @@ export default function ChallengePage() {
       </section>
     );
   }
+
+  const adminActionHref = user
+    ? `/admin?intent=team-add&challengeId=${encodeURIComponent(challenge.id)}`
+    : `/login?redirect=${encodeURIComponent(`/admin?intent=team-add&challengeId=${challenge.id}`)}`;
 
   return (
     <div className="screen-stack">
@@ -61,7 +67,7 @@ export default function ChallengePage() {
             <h3 className="section-title">{challenge.rankingTitle}</h3>
           </div>
 
-          <Link className="button button-secondary" to="/login">
+          <Link className="button button-secondary" to={adminActionHref}>
             Adicionar equipe
           </Link>
         </div>
@@ -96,4 +102,3 @@ export default function ChallengePage() {
     </div>
   );
 }
-

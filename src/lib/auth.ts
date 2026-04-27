@@ -1,6 +1,6 @@
 import { apiFetch } from "./api";
 
-type SessionUser = {
+export type SessionUser = {
   id: string;
   name: string;
   email: string;
