@@ -14,6 +14,13 @@ import {
 } from "@/lib/format";
 import type { TeamDetail, TimeParts } from "@/lib/types";
 
+const hourOptions = Array.from({ length: 24 }, (_, index) =>
+  index.toString().padStart(2, "0"),
+);
+const minuteSecondOptions = Array.from({ length: 60 }, (_, index) =>
+  index.toString().padStart(2, "0"),
+);
+
 export default function TeamPage() {
   const { challengeTeamId = "" } = useParams();
   const { user } = useAuthSession();
@@ -162,15 +169,13 @@ export default function TeamPage() {
     field: keyof TimeParts,
     value: string,
   ) {
-    const digitsOnly = value.replace(/\D/g, "").slice(0, 2);
-
     setResultForms((currentForms) => ({
       ...currentForms,
       [participantId]: {
         hours: currentForms[participantId]?.hours ?? "00",
         minutes: currentForms[participantId]?.minutes ?? "00",
         seconds: currentForms[participantId]?.seconds ?? "00",
-        [field]: digitsOnly,
+        [field]: value,
       },
     }));
   }
@@ -276,33 +281,45 @@ export default function TeamPage() {
                   <strong className="roster-result">{participant.resultLabel}</strong>
 
                   <div className="compact-form-grid">
-                    <input
+                    <select
                       className="field-input field-input-compact"
-                      inputMode="numeric"
                       onChange={(event) =>
                         updateResultField(participant.id, "hours", event.target.value)
                       }
-                      placeholder="hh"
                       value={parts.hours}
-                    />
-                    <input
+                    >
+                      {hourOptions.map((option) => (
+                        <option key={`hour-${option}`} value={option}>
+                          {option}h
+                        </option>
+                      ))}
+                    </select>
+                    <select
                       className="field-input field-input-compact"
-                      inputMode="numeric"
                       onChange={(event) =>
                         updateResultField(participant.id, "minutes", event.target.value)
                       }
-                      placeholder="mm"
                       value={parts.minutes}
-                    />
-                    <input
+                    >
+                      {minuteSecondOptions.map((option) => (
+                        <option key={`minute-${option}`} value={option}>
+                          {option}m
+                        </option>
+                      ))}
+                    </select>
+                    <select
                       className="field-input field-input-compact"
-                      inputMode="numeric"
                       onChange={(event) =>
                         updateResultField(participant.id, "seconds", event.target.value)
                       }
-                      placeholder="ss"
                       value={parts.seconds}
-                    />
+                    >
+                      {minuteSecondOptions.map((option) => (
+                        <option key={`second-${option}`} value={option}>
+                          {option}s
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   {user ? (
