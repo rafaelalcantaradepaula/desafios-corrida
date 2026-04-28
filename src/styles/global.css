@@ -491,12 +491,13 @@ textarea {
 
 .roster-side .ranking-side {
   width: 100%;
+  align-items: center;
 }
 
 .floating-picker-row {
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  justify-content: center;
   gap: 10px;
 }
 
@@ -508,7 +509,7 @@ textarea {
 }
 
 .floating-picker-trigger {
-  display: inline-flex;
+  display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
@@ -521,11 +522,28 @@ textarea {
   color: var(--text);
 }
 
-.floating-picker-value {
+.floating-picker-input {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
   font-family: var(--font-display);
   font-size: 1.45rem;
   font-weight: 800;
   letter-spacing: -0.04em;
+  text-align: center;
+  outline: none;
+}
+
+.floating-picker-input::-webkit-outer-spin-button,
+.floating-picker-input::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+.floating-picker-input[type="text"] {
+  appearance: textfield;
 }
 
 .floating-picker-unit {
@@ -550,6 +568,21 @@ textarea {
   font-size: 1.1rem;
   font-weight: 800;
   line-height: 1;
+}
+
+.floating-picker-glyph {
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+}
+
+.floating-picker-glyph-up {
+  border-bottom: 7px solid currentColor;
+}
+
+.floating-picker-glyph-down {
+  border-top: 7px solid currentColor;
 }
 
 .floating-picker-arrow:disabled {
@@ -632,7 +665,7 @@ textarea {
       0 18px 32px rgba(0, 0, 0, 0.34);
   }
 
-  .floating-picker-value {
+  .floating-picker-input {
     color: #ffffff;
     text-shadow: 0 2px 18px rgba(255, 255, 255, 0.08);
   }
@@ -681,6 +714,6 @@ textarea {
   }
 
   .floating-picker-row {
-    justify-content: flex-start;
+    justify-content: center;
   }
 }
