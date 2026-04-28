@@ -226,6 +226,10 @@ export default function TeamPage() {
     : `/login?redirect=${encodeURIComponent(`/admin?intent=participant-add&challengeTeamId=${team.id}`)}`;
   const minuteOptions =
     team.challengeType === "pace" ? paceMinuteOptions : minuteSecondOptions;
+  const pickerRowClassName =
+    team.challengeType === "time"
+      ? "floating-picker-row floating-picker-row-three"
+      : "floating-picker-row floating-picker-row-two";
 
   return (
     <div className="screen-stack">
@@ -279,7 +283,7 @@ export default function TeamPage() {
                 <div className="ranking-side">
                   <strong className="roster-result">{participant.resultLabel}</strong>
 
-                  <div className="floating-picker-row">
+                  <div className={pickerRowClassName}>
                     {team.challengeType === "time" ? (
                       <FloatingNumberPicker
                         label="h"
