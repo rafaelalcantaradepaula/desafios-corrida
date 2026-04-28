@@ -70,16 +70,9 @@ export default function LoginPage() {
       <section className="summary-card">
         <p className="card-kicker">Autenticacao</p>
         <h2 className="screen-title">Acesso administrativo</h2>
-        <p className="screen-subtitle">
-          Entre para criar desafios, adicionar equipes e registrar resultados no MVP.
-        </p>
       </section>
 
       <section className="form-card">
-        <p className="support-text">
-          Depois do login voce sera redirecionado para <strong>{redirectTo}</strong>.
-        </p>
-
         <form className="form-stack" onSubmit={handleSubmit}>
           <div className="form-grid form-grid-single">
             <label className="field-group">
@@ -120,12 +113,6 @@ export default function LoginPage() {
             Encerrar sessao
           </button>
         </div>
-
-        <p className="support-text">
-          Credencial inicial de bootstrap: `admin@desafioscorrida.local`. A senha
-          inicial esta documentada no guia operacional da fase 3 e deve ser
-          trocada apos o primeiro acesso.
-        </p>
 
         <p className="support-text">{sessionMessage}</p>
 

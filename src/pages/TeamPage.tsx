@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import FloatingNumberPicker from "@/components/FloatingNumberPicker";
 import { useAuthSession } from "@/lib/auth-context";
 import { ApiError } from "@/lib/api";
 import {
@@ -231,17 +232,11 @@ export default function TeamPage() {
       <section className="summary-card">
         <p className="card-kicker">{formatChallengeTypeLabel(team.challengeType)}</p>
         <h2 className="screen-title">{team.teamName}</h2>
-        <p className="screen-subtitle">
-          Participantes e resultados do desafio {team.challengeTitle}.
-        </p>
       </section>
 
       <section className="section-block">
         <div className="section-head">
-          <div>
-            <p className="section-kicker">Tela de equipe</p>
-            <h3 className="section-title">Lista simples de participantes</h3>
-          </div>
+          <h3 className="section-title">{team.challengeTitle}</h3>
 
           {user ? (
             <form className="inline-form" onSubmit={handleAddParticipant}>
@@ -279,54 +274,38 @@ export default function TeamPage() {
               <article className="roster-row roster-side" key={participant.id}>
                 <div className="roster-copy">
                   <p className="roster-name">{participant.name}</p>
-                  <p className="roster-meta">Resultado individual opcional</p>
                 </div>
 
                 <div className="ranking-side">
                   <strong className="roster-result">{participant.resultLabel}</strong>
 
-                  <div className="compact-form-grid">
+                  <div className="floating-picker-row">
                     {team.challengeType === "time" ? (
-                      <select
-                        className="field-input field-input-compact"
-                        onChange={(event) =>
-                          updateResultField(participant.id, "hours", event.target.value)
+                      <FloatingNumberPicker
+                        label="h"
+                        onChange={(value) =>
+                          updateResultField(participant.id, "hours", value)
                         }
+                        options={hourOptions}
                         value={parts.hours}
-                      >
-                        {hourOptions.map((option) => (
-                          <option key={`hour-${option}`} value={option}>
-                            {option}h
-                          </option>
-                        ))}
-                      </select>
+                      />
                     ) : null}
-                    <select
-                      className="field-input field-input-compact"
-                      onChange={(event) =>
-                        updateResultField(participant.id, "minutes", event.target.value)
+                    <FloatingNumberPicker
+                      label="m"
+                      onChange={(value) =>
+                        updateResultField(participant.id, "minutes", value)
                       }
+                      options={minuteOptions}
                       value={parts.minutes}
-                    >
-                      {minuteOptions.map((option) => (
-                        <option key={`minute-${option}`} value={option}>
-                          {option}m
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      className="field-input field-input-compact"
-                      onChange={(event) =>
-                        updateResultField(participant.id, "seconds", event.target.value)
+                    />
+                    <FloatingNumberPicker
+                      label="s"
+                      onChange={(value) =>
+                        updateResultField(participant.id, "seconds", value)
                       }
+                      options={minuteSecondOptions}
                       value={parts.seconds}
-                    >
-                      {minuteSecondOptions.map((option) => (
-                        <option key={`second-${option}`} value={option}>
-                          {option}s
-                        </option>
-                      ))}
-                    </select>
+                    />
                   </div>
 
                   {user ? (
@@ -344,20 +323,6 @@ export default function TeamPage() {
             );
           })}
         </div>
-      </section>
-
-      <section className="form-card">
-        <div className="section-head">
-          <div>
-            <p className="section-kicker">Apuracao</p>
-            <h3 className="section-title">Resultados salvos em segundos</h3>
-          </div>
-        </div>
-
-        <p className="support-text">
-          Informe o pace ou o tempo total em horas, minutos e segundos. A API salva
-          o valor em segundos e recalcula o ranking do desafio na consulta seguinte.
-        </p>
       </section>
     </div>
   );

@@ -59,10 +59,6 @@ export default function HomePage() {
         <div className="hero-copy">
           <p className="eyebrow">App esportivo</p>
           <h2 className="screen-title">Acompanhe quem puxa o pelotao</h2>
-          <p className="screen-subtitle">
-            A fase 4 conecta a home ao ranking real dos desafios ativos, com
-            destaque para quem lidera a disputa neste momento.
-          </p>
         </div>
 
         <div className="actions-row">
@@ -80,16 +76,7 @@ export default function HomePage() {
 
       <section className="section-block">
         <div className="section-head">
-          <div>
-            <p className="section-kicker">Desafios ativos</p>
-            <h3 className="section-title">Cards com ranking resumido</h3>
-          </div>
-
-          <p className="section-note">
-            {isLoading
-              ? "Carregando dados do ranking."
-              : `${challenges.length} desafio(s) ativo(s) carregado(s).`}
-          </p>
+          <h3 className="section-title">Desafios ativos</h3>
         </div>
 
         {errorMessage ? (

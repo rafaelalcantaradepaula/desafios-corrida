@@ -9,16 +9,16 @@ import { useAuthSession } from "@/lib/auth-context";
 import { ApiError } from "@/lib/api";
 import type { ChallengeSummary, TeamDetail } from "@/lib/types";
 
-function getIntentMessage(intent: string | null) {
+function getIntentLabel(intent: string | null) {
   switch (intent) {
     case "challenge-create":
-      return "Voce abriu o fluxo de criacao de desafio. Preencha o formulario para publicar um novo placar.";
+      return "Criar desafio";
     case "team-add":
-      return "Voce veio para adicionar uma equipe. Escolha o desafio correto logo abaixo e siga para o ranking.";
+      return "Adicionar equipe";
     case "participant-add":
-      return "Voce veio para adicionar participante ou resultado. Abra a equipe destacada e conclua o lancamento.";
+      return "Lancar resultado";
     default:
-      return "Sua sessao esta valida. Use este painel para criar desafios e retomar os fluxos administrativos do MVP.";
+      return "Painel pronto";
   }
 }
 
@@ -39,6 +39,7 @@ export default function AdminPage() {
   const [successMessage, setSuccessMessage] = useState("");
   const challengeId = searchParams.get("challengeId");
   const challengeTeamId = searchParams.get("challengeTeamId");
+  const intentLabel = getIntentLabel(intent);
 
   useEffect(() => {
     let isMounted = true;
@@ -124,26 +125,21 @@ export default function AdminPage() {
       <section className="summary-card">
         <p className="card-kicker">Area administrativa</p>
         <h2 className="screen-title">Painel do administrador</h2>
-        <p className="screen-subtitle">
-          Logado como {user?.email}. {getIntentMessage(intent)}
-        </p>
+        <div className="challenge-card-meta">
+          <span className="metric-chip">{user?.email}</span>
+          <span className="metric-chip metric-chip-accent">{intentLabel}</span>
+        </div>
       </section>
 
       <section className="section-block">
         <div className="section-head">
-          <div>
-            <p className="section-kicker">Atalhos</p>
-            <h3 className="section-title">Fluxos disponiveis no MVP</h3>
-          </div>
+          <h3 className="section-title">Acoes principais</h3>
         </div>
 
         <div className="card-stack">
           <article className="challenge-card">
             <p className="card-kicker">Desafios</p>
             <h3 className="challenge-card-title">Criar e publicar desafios</h3>
-            <p className="challenge-card-copy">
-              O fluxo real da fase 4 ja cria desafios ativos via API.
-            </p>
             <form className="form-stack" onSubmit={handleCreateChallenge}>
               <label className="field-group">
                 <span className="field-label">Titulo</span>
@@ -198,10 +194,6 @@ export default function AdminPage() {
           <article className="challenge-card">
             <p className="card-kicker">Operacao assistida</p>
             <h3 className="challenge-card-title">Retomar o proximo passo</h3>
-            <p className="challenge-card-copy">
-              Este bloco ajuda a retomar o fluxo de cadastro com base no contexto
-              que trouxe voce ate o painel.
-            </p>
             <div className="actions-row">
               {intent === "team-add" && challengeId ? (
                 <Link className="button button-secondary" to={`/challenges/${challengeId}`}>
@@ -220,9 +212,10 @@ export default function AdminPage() {
               ) : null}
             </div>
             {selectedTeam ? (
-              <p className="support-text">
-                Equipe em foco: {selectedTeam.teamName} no desafio {selectedTeam.challengeTitle}.
-              </p>
+              <div className="challenge-card-meta">
+                <span className="metric-chip">{selectedTeam.teamName}</span>
+                <span className="metric-chip">{selectedTeam.challengeTitle}</span>
+              </div>
             ) : null}
           </article>
         </div>
@@ -230,16 +223,7 @@ export default function AdminPage() {
 
       <section className="section-block">
         <div className="section-head">
-          <div>
-            <p className="section-kicker">Desafios ativos</p>
-            <h3 className="section-title">Acompanhar e completar cadastros</h3>
-          </div>
-
-          <p className="section-note">
-            {isDashboardLoading
-              ? "Sincronizando painel."
-              : `${challenges.length} desafio(s) ativos.`}
-          </p>
+          <h3 className="section-title">Desafios ativos</h3>
         </div>
 
         {isDashboardLoading ? (
@@ -279,10 +263,10 @@ export default function AdminPage() {
                 >
                   <p className="card-kicker">{challenge.statusLabel}</p>
                   <h3 className="challenge-card-title">{challenge.title}</h3>
-                  <p className="challenge-card-copy">{challenge.description}</p>
-                  <p className="support-text">
-                    {challenge.teamCount} equipe(s) - Lider: {challenge.leaderTeamName}
-                  </p>
+                  <div className="challenge-card-meta">
+                    <span className="metric-chip">{challenge.teamCount} equipes</span>
+                    <span className="metric-chip">{challenge.leaderTeamName}</span>
+                  </div>
 
                   <div className="actions-row">
                     <Link className="button button-secondary button-compact" to={`/challenges/${challenge.id}`}>

@@ -17,18 +17,13 @@ export default function AppShell() {
       <div className="app-frame">
         <header className="topbar">
           <div>
-            <p className="eyebrow">{user ? "Admin ativo" : "Modo publico"}</p>
+            <p className="eyebrow">{user ? "Admin" : "Ranking"}</p>
             <h1 className="brand-title">Desafios de corrida</h1>
-            <p className="topbar-note">
-              {user
-                ? "Painel liberado para criar desafios e completar lancamentos."
-                : "Acompanhe o ranking ao vivo e entre apenas para operacoes administrativas."}
-            </p>
           </div>
 
           <div className="topbar-actions">
             <div className="status-pill">
-              {user ? "Sessao administrativa ativa" : "Base tecnica pronta"}
+              {user ? "Sessao ativa" : "Consulta publica"}
             </div>
             <Link className="button button-secondary button-compact" to={adminTarget}>
               {user ? "Abrir painel" : "Entrar"}

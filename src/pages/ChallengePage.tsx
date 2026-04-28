@@ -149,8 +149,6 @@ export default function ChallengePage() {
           <MetricChip text={challenge.statusLabel} tone="accent" />
         </div>
 
-        <p className="screen-subtitle">{challenge.description}</p>
-
         <div className="summary-grid">
           <div className="summary-item">
             <span className="summary-label">Tipo do desafio</span>
@@ -171,10 +169,7 @@ export default function ChallengePage() {
 
       <section className="section-block">
         <div className="section-head">
-          <div>
-            <p className="section-kicker">Tela principal do desafio</p>
-            <h3 className="section-title">{challenge.rankingTitle}</h3>
-          </div>
+          <h3 className="section-title">{challenge.rankingTitle}</h3>
 
           {user ? (
             <form className="inline-form" onSubmit={handleAddTeam}>
@@ -198,8 +193,6 @@ export default function ChallengePage() {
             </Link>
           )}
         </div>
-
-        <p className="page-note">{challenge.rankingSummary}</p>
 
         {feedbackMessage ? <p className="support-text">{feedbackMessage}</p> : null}
         {errorMessage ? (
