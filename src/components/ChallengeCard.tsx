@@ -12,7 +12,7 @@ export default function ChallengeCard({
   showStatusText = false,
 }: ChallengeCardProps) {
   return (
-    <article className="challenge-card">
+    <Link className="challenge-card challenge-card-link" to={`/challenges/${challenge.id}`}>
       <div className="challenge-card-header">
         <div>
           {showStatusText ? (
@@ -31,14 +31,11 @@ export default function ChallengeCard({
 
         <div className="challenge-card-action">
           <strong className="challenge-card-result">{challenge.leaderResultLabel}</strong>
-          <Link
-            className="button button-secondary button-compact challenge-card-open"
-            to={`/challenges/${challenge.id}`}
-          >
+          <span className="button button-secondary button-compact challenge-card-open">
             abrir
-          </Link>
+          </span>
         </div>
       </div>
-    </article>
+    </Link>
   );
 }

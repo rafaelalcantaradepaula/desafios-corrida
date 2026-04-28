@@ -1,4 +1,10 @@
-import type { KeyboardEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  type KeyboardEvent,
+  type MouseEvent,
+  type PointerEvent,
+} from "react";
 
 type FloatingNumberPickerProps = {
   label: string;
@@ -13,6 +19,8 @@ export default function FloatingNumberPicker({
   options,
   value,
 }: FloatingNumberPickerProps) {
+  const holdDelayRef = useRef<number | null>(null);
+  const holdIntervalRef = useRef<number | null>(null);
   const selectedIndex = Math.max(0, options.indexOf(value));
   const canDecrease = selectedIndex > 0;
   const canIncrease = selectedIndex < options.length - 1;
@@ -67,6 +75,49 @@ export default function FloatingNumberPicker({
     onChange(normalizeValue(nextValue));
   }
 
+  function stopStepping() {
+    if (holdDelayRef.current !== null) {
+      window.clearTimeout(holdDelayRef.current);
+      holdDelayRef.current = null;
+    }
+
+    if (holdIntervalRef.current !== null) {
+      window.clearInterval(holdIntervalRef.current);
+      holdIntervalRef.current = null;
+    }
+  }
+
+  function startStepping(
+    event: PointerEvent<HTMLButtonElement>,
+    direction: "up" | "down",
+    canStep: boolean,
+  ) {
+    if (!canStep) {
+      return;
+    }
+
+    event.preventDefault();
+    stopStepping();
+    handleStep(direction);
+    holdDelayRef.current = window.setTimeout(() => {
+      holdIntervalRef.current = window.setInterval(() => {
+        handleStep(direction);
+      }, 90);
+    }, 360);
+  }
+
+  function handleButtonClick(event: MouseEvent<HTMLButtonElement>, direction: "up" | "down") {
+    if (event.detail === 0) {
+      handleStep(direction);
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      stopStepping();
+    };
+  }, []);
+
   return (
     <div
       aria-label={`Seletor de ${label}`}
@@ -77,7 +128,11 @@ export default function FloatingNumberPicker({
         aria-label={`Aumentar ${label}`}
         className="floating-picker-arrow"
         disabled={!canIncrease}
-        onClick={() => handleStep("up")}
+        onClick={(event) => handleButtonClick(event, "up")}
+        onPointerCancel={stopStepping}
+        onPointerDown={(event) => startStepping(event, "up", canIncrease)}
+        onPointerLeave={stopStepping}
+        onPointerUp={stopStepping}
         type="button"
       >
         <span aria-hidden="true" className="floating-picker-glyph floating-picker-glyph-up" />
@@ -103,7 +158,11 @@ export default function FloatingNumberPicker({
         aria-label={`Diminuir ${label}`}
         className="floating-picker-arrow"
         disabled={!canDecrease}
-        onClick={() => handleStep("down")}
+        onClick={(event) => handleButtonClick(event, "down")}
+        onPointerCancel={stopStepping}
+        onPointerDown={(event) => startStepping(event, "down", canDecrease)}
+        onPointerLeave={stopStepping}
+        onPointerUp={stopStepping}
         type="button"
       >
         <span aria-hidden="true" className="floating-picker-glyph floating-picker-glyph-down" />

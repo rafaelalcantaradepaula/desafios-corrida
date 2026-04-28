@@ -92,7 +92,7 @@ textarea {
   min-height: 100vh;
   width: min(100%, 520px);
   margin: 0 auto;
-  padding: 20px 16px 28px;
+  padding: 20px 16px calc(28px + env(safe-area-inset-bottom));
 }
 
 .topbar,
@@ -291,6 +291,28 @@ textarea {
   line-height: 1.08;
 }
 
+.challenge-card-link {
+  display: block;
+}
+
+.challenge-card-link,
+.ranking-row-link {
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background-color 160ms ease;
+}
+
+.challenge-card-link:hover,
+.challenge-card-link:focus-visible,
+.ranking-row-link:hover,
+.ranking-row-link:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(113, 216, 182, 0.3);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.24);
+}
+
 .challenge-card-copy {
   margin-top: 12px;
 }
@@ -342,6 +364,7 @@ textarea {
 
 .challenge-card-open {
   white-space: nowrap;
+  pointer-events: none;
 }
 
 .admin-card-copy {
@@ -375,6 +398,50 @@ textarea {
   font-weight: 700;
 }
 
+.summary-card-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.summary-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.summary-pill {
+  flex: 1 1 140px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid rgba(159, 198, 211, 0.18);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.summary-pill-wide {
+  flex-basis: 220px;
+}
+
+.summary-pill-label {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.summary-pill-value {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -384,7 +451,8 @@ textarea {
 
 .summary-item,
 .ranking-row,
-.roster-row {
+.roster-row,
+.roster-card {
   border: 1px solid var(--line);
   background: var(--panel);
 }
@@ -403,6 +471,19 @@ textarea {
   border-radius: var(--radius-lg);
 }
 
+.ranking-row-leader {
+  border-color: rgba(240, 90, 40, 0.4);
+  background:
+    radial-gradient(circle at right top, rgba(240, 90, 40, 0.2), transparent 34%),
+    rgba(10, 25, 37, 0.92);
+  box-shadow: 0 18px 34px rgba(240, 90, 40, 0.12);
+}
+
+.ranking-row-podium-2,
+.ranking-row-podium-3 {
+  border-color: rgba(159, 198, 211, 0.24);
+}
+
 .ranking-place {
   display: inline-flex;
   align-items: center;
@@ -416,6 +497,21 @@ textarea {
   font-family: var(--font-display);
   font-size: 1rem;
   font-weight: 800;
+}
+
+.ranking-place-podium-1 {
+  background: linear-gradient(135deg, rgba(240, 90, 40, 0.9), rgba(255, 144, 95, 0.75));
+  color: #fff6f2;
+}
+
+.ranking-place-podium-2 {
+  background: linear-gradient(135deg, rgba(133, 160, 172, 0.92), rgba(182, 208, 218, 0.72));
+  color: #06111a;
+}
+
+.ranking-place-podium-3 {
+  background: linear-gradient(135deg, rgba(164, 109, 79, 0.92), rgba(212, 152, 115, 0.72));
+  color: #fff7f2;
 }
 
 .ranking-copy,
@@ -521,6 +617,86 @@ textarea {
   align-items: flex-start;
 }
 
+.roster-card {
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+}
+
+.roster-card-open {
+  border-color: rgba(113, 216, 182, 0.34);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.22);
+}
+
+.roster-toggle,
+.roster-static-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+  padding: 16px;
+}
+
+.roster-toggle {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.roster-headside {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-left: auto;
+}
+
+.roster-result {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  letter-spacing: -0.03em;
+  text-align: right;
+}
+
+.roster-chevron {
+  width: 10px;
+  height: 10px;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(45deg);
+  transition: transform 160ms ease;
+}
+
+.roster-chevron-open {
+  transform: rotate(225deg);
+}
+
+.roster-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 0 16px 16px;
+}
+
+.roster-editor-preview {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.roster-editor-value {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
+.roster-card-static .roster-result {
+  margin-left: auto;
+}
+
 .roster-side .ranking-side {
   width: 100%;
   align-items: center;
@@ -543,9 +719,9 @@ textarea {
 
 .floating-picker {
   display: grid;
-  grid-template-rows: 34px minmax(78px, auto) 34px;
+  grid-template-rows: 40px minmax(86px, auto) 40px;
   justify-items: center;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
   width: 100%;
 }
@@ -557,9 +733,9 @@ textarea {
   justify-content: center;
   width: 100%;
   min-width: 0;
-  min-height: 78px;
+  min-height: 86px;
   padding: 12px 14px;
-  border: 1px solid rgba(159, 198, 211, 0.28);
+  border: 1px solid rgba(159, 198, 211, 0.34);
   border-radius: 24px;
   background: rgba(255, 255, 255, 0.05);
   color: var(--text);
@@ -572,7 +748,7 @@ textarea {
   background: transparent;
   color: var(--text);
   font-family: var(--font-display);
-  font-size: 1.45rem;
+  font-size: 1.7rem;
   font-weight: 800;
   letter-spacing: -0.04em;
   text-align: center;
@@ -601,8 +777,8 @@ textarea {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 34px;
+  width: 42px;
+  height: 40px;
   border: 1px solid rgba(159, 198, 211, 0.18);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.04);
@@ -611,6 +787,7 @@ textarea {
   font-size: 1.1rem;
   font-weight: 800;
   line-height: 1;
+  touch-action: none;
 }
 
 .floating-picker-glyph {
@@ -676,7 +853,7 @@ textarea {
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
   margin-top: 20px;
-  padding: 10px;
+  padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
   border: 1px solid var(--line);
   border-radius: 24px;
   background: rgba(7, 17, 26, 0.92);
@@ -686,12 +863,24 @@ textarea {
 
 .bottom-nav-link {
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 42px;
+  gap: 4px;
+  min-height: 48px;
   border-radius: 16px;
   color: var(--muted);
   font-weight: 700;
+}
+
+.bottom-nav-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.bottom-nav-label {
+  font-size: 0.75rem;
+  line-height: 1;
 }
 
 .bottom-nav-link-active {
@@ -710,7 +899,7 @@ textarea {
 
   .floating-picker-input {
     color: #ffffff;
-    text-shadow: 0 2px 18px rgba(255, 255, 255, 0.08);
+    text-shadow: 0 2px 20px rgba(255, 255, 255, 0.1);
   }
 
   .floating-picker-arrow {
@@ -750,12 +939,24 @@ textarea {
   }
 
   .ranking-row,
-  .roster-row {
+  .roster-row,
+  .roster-toggle,
+  .roster-static-row {
     align-items: flex-start;
   }
 
   .ranking-side {
     align-items: flex-start;
+  }
+
+  .roster-headside {
+    width: 100%;
+    justify-content: space-between;
+    margin-left: 0;
+  }
+
+  .summary-pill {
+    flex-basis: calc(50% - 5px);
   }
 
   .compact-form-grid {
@@ -767,11 +968,11 @@ textarea {
   }
 
   .floating-picker-trigger {
-    min-height: 72px;
+    min-height: 76px;
     padding: 10px 8px;
   }
 
   .floating-picker-input {
-    font-size: 1.2rem;
+    font-size: 1.35rem;
   }
 }

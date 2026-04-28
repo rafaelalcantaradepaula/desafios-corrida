@@ -13,12 +13,12 @@ export default function AdminPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [type, setType] = useState<"pace" | "time">("pace");
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [challenges, setChallenges] = useState<ChallengeSummary[]>([]);
   const [isDashboardLoading, setIsDashboardLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dashboardErrorMessage, setDashboardErrorMessage] = useState("");
   const [formErrorMessage, setFormErrorMessage] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
     let isMounted = true;
@@ -63,7 +63,6 @@ export default function AdminPage() {
     event.preventDefault();
     setIsSubmitting(true);
     setFormErrorMessage("");
-    setSuccessMessage("");
 
     try {
       const challenge = await createChallenge({
@@ -72,9 +71,9 @@ export default function AdminPage() {
         type,
       });
 
-      setSuccessMessage("Desafio criado com sucesso.");
       setTitle("");
       setDescription("");
+      setIsCreateOpen(false);
       navigate(`/challenges/${challenge.id}`);
     } catch (error) {
       setFormErrorMessage(
@@ -91,13 +90,18 @@ export default function AdminPage() {
     <div className="screen-stack">
       <section className="section-block">
         <div className="section-head">
-          <h3 className="section-title">Acoes principais</h3>
+          <h3 className="section-title">Desafios ativos</h3>
+          <button
+            className="button button-secondary button-compact"
+            onClick={() => setIsCreateOpen((currentState) => !currentState)}
+            type="button"
+          >
+            {isCreateOpen ? "Fechar" : "Novo desafio"}
+          </button>
         </div>
 
-        <div className="card-stack">
-          <article className="challenge-card">
-            <p className="card-kicker">Desafios</p>
-            <h3 className="challenge-card-title">Criar e publicar desafios</h3>
+        {isCreateOpen ? (
+          <article className="form-card">
             <form className="form-stack" onSubmit={handleCreateChallenge}>
               <label className="field-group">
                 <span className="field-label">Titulo</span>
@@ -131,30 +135,16 @@ export default function AdminPage() {
                 </select>
               </label>
 
-              <div className="actions-row">
-                <Link className="button button-secondary" to="/">
-                  Voltar para a home
-                </Link>
-                <button className="button button-primary" disabled={isSubmitting} type="submit">
-                  {isSubmitting ? "Criando..." : "Criar desafio"}
-                </button>
-              </div>
+              <button className="button button-primary" disabled={isSubmitting} type="submit">
+                {isSubmitting ? "Criando..." : "Criar desafio"}
+              </button>
             </form>
 
-            {successMessage ? (
-              <p className="support-text support-text-success">{successMessage}</p>
-            ) : null}
             {formErrorMessage ? (
               <p className="support-text support-text-error">{formErrorMessage}</p>
             ) : null}
           </article>
-        </div>
-      </section>
-
-      <section className="section-block">
-        <div className="section-head">
-          <h3 className="section-title">Desafios ativos</h3>
-        </div>
+        ) : null}
 
         {isDashboardLoading ? (
           <section className="empty-state">

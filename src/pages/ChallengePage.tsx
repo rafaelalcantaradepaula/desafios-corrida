@@ -1,11 +1,34 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import MetricChip from "@/components/MetricChip";
 import { useAuthSession } from "@/lib/auth-context";
 import { ApiError } from "@/lib/api";
 import { addTeam, loadChallengeDetail } from "@/lib/challenges";
 import { formatChallengeTypeLabel } from "@/lib/format";
 import type { ChallengeDetail } from "@/lib/types";
+
+function getRankingRowClassName(position: number) {
+  const classNames = ["ranking-row", "ranking-row-link"];
+
+  if (position === 1) {
+    classNames.push("ranking-row-leader");
+  }
+
+  if (position <= 3) {
+    classNames.push(`ranking-row-podium-${position}`);
+  }
+
+  return classNames.join(" ");
+}
+
+function getRankingPlaceClassName(position: number) {
+  const classNames = ["ranking-place"];
+
+  if (position <= 3) {
+    classNames.push(`ranking-place-podium-${position}`);
+  }
+
+  return classNames.join(" ");
+}
 
 export default function ChallengePage() {
   const { challengeId = "" } = useParams();
@@ -139,30 +162,22 @@ export default function ChallengePage() {
 
   return (
     <div className="screen-stack">
-      <section className="summary-card">
-        <div className="challenge-card-header">
-          <div>
-            <p className="card-kicker">{formatChallengeTypeLabel(challenge.type)}</p>
-            <h2 className="screen-title">{challenge.title}</h2>
-          </div>
+      <section className="summary-card summary-card-compact">
+        <p className="card-kicker">{formatChallengeTypeLabel(challenge.type)}</p>
+        <h2 className="screen-title">{challenge.title}</h2>
 
-          <MetricChip text={challenge.statusLabel} tone="accent" />
-        </div>
-
-        <div className="summary-grid">
-          <div className="summary-item">
-            <span className="summary-label">Tipo do desafio</span>
-            <strong className="summary-value">
-              {formatChallengeTypeLabel(challenge.type)}
-            </strong>
+        <div className="summary-strip">
+          <div className="summary-pill">
+            <span className="summary-pill-label">Equipes</span>
+            <strong className="summary-pill-value">{challenge.teamCount}</strong>
           </div>
-          <div className="summary-item">
-            <span className="summary-label">Equipes</span>
-            <strong className="summary-value">{challenge.teamCount}</strong>
+          <div className="summary-pill">
+            <span className="summary-pill-label">Lider</span>
+            <strong className="summary-pill-value">{challenge.leaderTeamName}</strong>
           </div>
-          <div className="summary-item">
-            <span className="summary-label">Lider parcial</span>
-            <strong className="summary-value">{challenge.leaderTeamName}</strong>
+          <div className="summary-pill">
+            <span className="summary-pill-label">Parcial</span>
+            <strong className="summary-pill-value">{challenge.leaderResultLabel}</strong>
           </div>
         </div>
       </section>
@@ -201,8 +216,12 @@ export default function ChallengePage() {
 
         <div className="ranking-list">
           {challenge.teams.map((team) => (
-            <article className="ranking-row" key={team.challengeTeamId}>
-              <div className="ranking-place">{team.position}</div>
+            <Link
+              className={getRankingRowClassName(team.position)}
+              key={team.challengeTeamId}
+              to={`/teams/${team.challengeTeamId}`}
+            >
+              <div className={getRankingPlaceClassName(team.position)}>{team.position}</div>
 
               <div className="ranking-copy">
                 <p className="ranking-name">{team.name}</p>
@@ -213,11 +232,9 @@ export default function ChallengePage() {
 
               <div className="ranking-side">
                 <strong className="ranking-result">{team.resultLabel}</strong>
-                <Link className="inline-link" to={`/teams/${team.challengeTeamId}`}>
-                  Abrir equipe
-                </Link>
+                <span className="inline-link">abrir equipe</span>
               </div>
-            </article>
+            </Link>
           ))}
         </div>
       </section>

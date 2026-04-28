@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import FloatingNumberPicker from "@/components/FloatingNumberPicker";
 import { useAuthSession } from "@/lib/auth-context";
@@ -10,10 +10,11 @@ import {
 } from "@/lib/challenges";
 import {
   formatChallengeTypeLabel,
+  formatResultByType,
   secondsToTimeParts,
   timePartsToSeconds,
 } from "@/lib/format";
-import type { TeamDetail, TimeParts } from "@/lib/types";
+import type { ChallengeType, TeamDetail, TimeParts } from "@/lib/types";
 
 const hourOptions = Array.from({ length: 24 }, (_, index) =>
   index.toString().padStart(2, "0"),
@@ -25,17 +26,40 @@ const paceMinuteOptions = Array.from({ length: 13 }, (_, index) =>
   index.toString().padStart(2, "0"),
 );
 
+function serializeTimeParts(parts: TimeParts) {
+  return `${parts.hours}:${parts.minutes}:${parts.seconds}`;
+}
+
+function formatPreviewLabel(challengeType: ChallengeType, parts: TimeParts) {
+  const totalSeconds = timePartsToSeconds(parts) ?? 0;
+  const hasResult = totalSeconds > 0;
+  return formatResultByType(challengeType, totalSeconds, hasResult);
+}
+
 export default function TeamPage() {
   const { challengeTeamId = "" } = useParams();
   const { user } = useAuthSession();
   const [team, setTeam] = useState<TeamDetail | null>(null);
   const [participantName, setParticipantName] = useState("");
   const [resultForms, setResultForms] = useState<Record<string, TimeParts>>({});
+  const [savedResultForms, setSavedResultForms] = useState<Record<string, TimeParts>>({});
+  const [expandedParticipantId, setExpandedParticipantId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddingParticipant, setIsAddingParticipant] = useState(false);
-  const [savingParticipantId, setSavingParticipantId] = useState<string | null>(null);
+  const [savingParticipantIds, setSavingParticipantIds] = useState<Record<string, boolean>>({});
+  const [failedSaveKeys, setFailedSaveKeys] = useState<Record<string, string>>({});
   const [errorMessage, setErrorMessage] = useState("");
   const [feedbackMessage, setFeedbackMessage] = useState("");
+  const autoSaveTimersRef = useRef<Record<string, number>>({});
+
+  function clearAutoSaveTimer(participantId: string) {
+    const timer = autoSaveTimersRef.current[participantId];
+
+    if (timer !== undefined) {
+      window.clearTimeout(timer);
+      delete autoSaveTimersRef.current[participantId];
+    }
+  }
 
   useEffect(() => {
     let isMounted = true;
@@ -86,8 +110,19 @@ export default function TeamPage() {
   useEffect(() => {
     if (!team) {
       setResultForms({});
+      setSavedResultForms({});
+      setExpandedParticipantId(null);
       return;
     }
+
+    setSavedResultForms(
+      Object.fromEntries(
+        team.participants.map((participant) => [
+          participant.id,
+          secondsToTimeParts(participant.resultSeconds),
+        ]),
+      ),
+    );
 
     setResultForms((currentForms) => {
       const nextForms: Record<string, TimeParts> = {};
@@ -99,7 +134,110 @@ export default function TeamPage() {
 
       return nextForms;
     });
-  }, [team]);
+
+    setExpandedParticipantId((currentParticipantId) => {
+      if (
+        currentParticipantId &&
+        team.participants.some((participant) => participant.id === currentParticipantId)
+      ) {
+        return currentParticipantId;
+      }
+
+      return user ? (team.participants[0]?.id ?? null) : null;
+    });
+  }, [team, user]);
+
+  async function saveParticipantResult(participantId: string) {
+    clearAutoSaveTimer(participantId);
+
+    const parts = resultForms[participantId];
+    const totalSeconds = parts ? timePartsToSeconds(parts) : null;
+    const currentKey = parts ? serializeTimeParts(parts) : "";
+
+    if (totalSeconds === null) {
+      setErrorMessage("Informe horas, minutos e segundos validos.");
+      return;
+    }
+
+    setSavingParticipantIds((currentState) => ({
+      ...currentState,
+      [participantId]: true,
+    }));
+    setErrorMessage("");
+
+    try {
+      const updatedTeam = await updateParticipantResult(participantId, totalSeconds);
+
+      if (!updatedTeam) {
+        setFailedSaveKeys((currentState) => ({
+          ...currentState,
+          [participantId]: currentKey,
+        }));
+        setErrorMessage("Participante nao encontrado para atualizar resultado.");
+        return;
+      }
+
+      setTeam(updatedTeam);
+      setFailedSaveKeys((currentState) => {
+        const nextState = { ...currentState };
+        delete nextState[participantId];
+        return nextState;
+      });
+    } catch (error) {
+      setFailedSaveKeys((currentState) => ({
+        ...currentState,
+        [participantId]: currentKey,
+      }));
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Nao foi possivel salvar o resultado.",
+      );
+    } finally {
+      setSavingParticipantIds((currentState) => {
+        const nextState = { ...currentState };
+        delete nextState[participantId];
+        return nextState;
+      });
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      for (const timer of Object.values(autoSaveTimersRef.current)) {
+        window.clearTimeout(timer);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!team || !user) {
+      return;
+    }
+
+    for (const participant of team.participants) {
+      const participantId = participant.id;
+      const currentParts = resultForms[participantId];
+      const savedParts = savedResultForms[participantId];
+
+      clearAutoSaveTimer(participantId);
+
+      if (!currentParts || !savedParts || savingParticipantIds[participantId]) {
+        continue;
+      }
+
+      const currentKey = serializeTimeParts(currentParts);
+      const savedKey = serializeTimeParts(savedParts);
+
+      if (currentKey === savedKey || failedSaveKeys[participantId] === currentKey) {
+        continue;
+      }
+
+      autoSaveTimersRef.current[participantId] = window.setTimeout(() => {
+        void saveParticipantResult(participantId);
+      }, 900);
+    }
+  }, [team, user, resultForms, savedResultForms, savingParticipantIds, failedSaveKeys]);
 
   async function handleAddParticipant(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -113,7 +251,8 @@ export default function TeamPage() {
     setFeedbackMessage("");
 
     try {
-      const updatedTeam = await addParticipant(team.id, participantName.trim());
+      const nextParticipantName = participantName.trim();
+      const updatedTeam = await addParticipant(team.id, nextParticipantName);
 
       if (!updatedTeam) {
         setErrorMessage("Equipe nao encontrada para adicionar participante.");
@@ -121,6 +260,11 @@ export default function TeamPage() {
       }
 
       setTeam(updatedTeam);
+      setExpandedParticipantId(
+        updatedTeam.participants.find((participant) => participant.name === nextParticipantName)?.id
+          ?? updatedTeam.participants[0]?.id
+          ?? null,
+      );
       setParticipantName("");
       setFeedbackMessage("Participante adicionado com sucesso.");
     } catch (error) {
@@ -134,45 +278,21 @@ export default function TeamPage() {
     }
   }
 
-  async function handleSaveResult(participantId: string) {
-    const parts = resultForms[participantId];
-    const totalSeconds = parts ? timePartsToSeconds(parts) : null;
-
-    if (totalSeconds === null) {
-      setErrorMessage("Informe horas, minutos e segundos validos.");
-      return;
-    }
-
-    setSavingParticipantId(participantId);
-    setErrorMessage("");
-    setFeedbackMessage("");
-
-    try {
-      const updatedTeam = await updateParticipantResult(participantId, totalSeconds);
-
-      if (!updatedTeam) {
-        setErrorMessage("Participante nao encontrado para atualizar resultado.");
-        return;
-      }
-
-      setTeam(updatedTeam);
-      setFeedbackMessage("Resultado individual atualizado.");
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "Nao foi possivel salvar o resultado.",
-      );
-    } finally {
-      setSavingParticipantId(null);
-    }
-  }
-
   function updateResultField(
     participantId: string,
     field: keyof TimeParts,
     value: string,
   ) {
+    clearAutoSaveTimer(participantId);
+    setFailedSaveKeys((currentState) => {
+      if (!(participantId in currentState)) {
+        return currentState;
+      }
+
+      const nextState = { ...currentState };
+      delete nextState[participantId];
+      return nextState;
+    });
     setResultForms((currentForms) => ({
       ...currentForms,
       [participantId]: {
@@ -230,19 +350,30 @@ export default function TeamPage() {
     team.challengeType === "time"
       ? "floating-picker-row floating-picker-row-three"
       : "floating-picker-row floating-picker-row-two";
+  const canEditParticipants = Boolean(user);
 
   return (
     <div className="screen-stack">
-      <section className="summary-card">
+      <section className="summary-card summary-card-compact">
         <p className="card-kicker">{formatChallengeTypeLabel(team.challengeType)}</p>
         <h2 className="screen-title">{team.teamName}</h2>
+        <div className="summary-strip">
+          <div className="summary-pill summary-pill-wide">
+            <span className="summary-pill-label">Desafio</span>
+            <strong className="summary-pill-value">{team.challengeTitle}</strong>
+          </div>
+          <div className="summary-pill">
+            <span className="summary-pill-label">Atletas</span>
+            <strong className="summary-pill-value">{team.participants.length}</strong>
+          </div>
+        </div>
       </section>
 
       <section className="section-block">
         <div className="section-head">
-          <h3 className="section-title">{team.challengeTitle}</h3>
+          <h3 className="section-title">Participantes</h3>
 
-          {user ? (
+          {canEditParticipants ? (
             <form className="inline-form" onSubmit={handleAddParticipant}>
               <input
                 className="field-input field-input-compact"
@@ -273,56 +404,97 @@ export default function TeamPage() {
         <div className="roster-list">
           {team.participants.map((participant) => {
             const parts = resultForms[participant.id] ?? secondsToTimeParts(0);
+            const savedParts =
+              savedResultForms[participant.id] ?? secondsToTimeParts(participant.resultSeconds);
+            const previewLabel = formatPreviewLabel(team.challengeType, parts);
+            const isExpanded = expandedParticipantId === participant.id;
+            const isSaving = Boolean(savingParticipantIds[participant.id]);
+            const isDirty = serializeTimeParts(parts) !== serializeTimeParts(savedParts);
+            const participantStatus = isSaving
+              ? "salvando"
+              : isDirty
+                ? "auto-save pendente"
+                : participant.resultSeconds > 0
+                  ? "salvo"
+                  : "sem resultado";
+
+            if (!canEditParticipants) {
+              return (
+                <article className="roster-card roster-card-static" key={participant.id}>
+                  <div className="roster-static-row">
+                    <div className="roster-copy">
+                      <p className="roster-name">{participant.name}</p>
+                      <p className="roster-meta">{participantStatus}</p>
+                    </div>
+
+                    <strong className="roster-result">{previewLabel}</strong>
+                  </div>
+                </article>
+              );
+            }
 
             return (
-              <article className="roster-row roster-side" key={participant.id}>
-                <div className="roster-copy">
-                  <p className="roster-name">{participant.name}</p>
-                </div>
-
-                <div className="ranking-side">
-                  <strong className="roster-result">{participant.resultLabel}</strong>
-
-                  <div className={pickerRowClassName}>
-                    {team.challengeType === "time" ? (
-                      <FloatingNumberPicker
-                        label="h"
-                        onChange={(value) =>
-                          updateResultField(participant.id, "hours", value)
-                        }
-                        options={hourOptions}
-                        value={parts.hours}
-                      />
-                    ) : null}
-                    <FloatingNumberPicker
-                      label="m"
-                      onChange={(value) =>
-                        updateResultField(participant.id, "minutes", value)
-                      }
-                      options={minuteOptions}
-                      value={parts.minutes}
-                    />
-                    <FloatingNumberPicker
-                      label="s"
-                      onChange={(value) =>
-                        updateResultField(participant.id, "seconds", value)
-                      }
-                      options={minuteSecondOptions}
-                      value={parts.seconds}
-                    />
+              <article className={`roster-card ${isExpanded ? "roster-card-open" : ""}`} key={participant.id}>
+                <button
+                  className="roster-toggle"
+                  onClick={() =>
+                    setExpandedParticipantId((currentParticipantId) =>
+                      currentParticipantId === participant.id ? null : participant.id,
+                    )
+                  }
+                  type="button"
+                >
+                  <div className="roster-copy">
+                    <p className="roster-name">{participant.name}</p>
+                    <p className="roster-meta">{participantStatus}</p>
                   </div>
 
-                  {user ? (
-                    <button
-                      className="button button-secondary button-compact"
-                      disabled={savingParticipantId === participant.id}
-                      onClick={() => void handleSaveResult(participant.id)}
-                      type="button"
-                    >
-                      {savingParticipantId === participant.id ? "Salvando..." : "Salvar"}
-                    </button>
-                  ) : null}
-                </div>
+                  <div className="roster-headside">
+                    <strong className="roster-result">{previewLabel}</strong>
+                    <span
+                      aria-hidden="true"
+                      className={`roster-chevron ${isExpanded ? "roster-chevron-open" : ""}`}
+                    />
+                  </div>
+                </button>
+
+                {isExpanded ? (
+                  <div className="roster-editor">
+                    <div className="roster-editor-preview">
+                      <span className="summary-pill-label">Previa</span>
+                      <strong className="roster-editor-value">{previewLabel}</strong>
+                    </div>
+
+                    <div className={pickerRowClassName}>
+                      {team.challengeType === "time" ? (
+                        <FloatingNumberPicker
+                          label="h"
+                          onChange={(value) =>
+                            updateResultField(participant.id, "hours", value)
+                          }
+                          options={hourOptions}
+                          value={parts.hours}
+                        />
+                      ) : null}
+                      <FloatingNumberPicker
+                        label="m"
+                        onChange={(value) =>
+                          updateResultField(participant.id, "minutes", value)
+                        }
+                        options={minuteOptions}
+                        value={parts.minutes}
+                      />
+                      <FloatingNumberPicker
+                        label="s"
+                        onChange={(value) =>
+                          updateResultField(participant.id, "seconds", value)
+                        }
+                        options={minuteSecondOptions}
+                        value={parts.seconds}
+                      />
+                    </div>
+                  </div>
+                ) : null}
               </article>
             );
           })}

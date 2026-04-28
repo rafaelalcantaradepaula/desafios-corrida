@@ -23,8 +23,16 @@ export function formatChallengeTypeLabel(type: ChallengeType) {
   return type === "pace" ? "Pace medio" : "Tempo acumulado";
 }
 
-export function formatResultByType(type: ChallengeType, seconds: number) {
-  return type === "pace" ? formatPace(seconds) : formatDuration(seconds);
+export function formatResultByType(
+  type: ChallengeType,
+  seconds: number,
+  hasResult = true,
+) {
+  if (type === "pace") {
+    return hasResult ? formatPace(seconds) : "Sem pace";
+  }
+
+  return formatDuration(seconds);
 }
 
 export function secondsToTimeParts(totalSeconds: number): TimeParts {
