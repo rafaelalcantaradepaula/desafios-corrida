@@ -83,6 +83,8 @@ export default function AppShell() {
       return;
     }
 
+    const activeViewport = viewport;
+
     function isEditableElement(target: Element | null) {
       return (
         target instanceof HTMLInputElement ||
@@ -93,19 +95,19 @@ export default function AppShell() {
 
     function syncKeyboardState() {
       const activeElement = document.activeElement;
-      const heightDelta = window.innerHeight - viewport.height;
+      const heightDelta = window.innerHeight - activeViewport.height;
       setIsKeyboardOpen(isEditableElement(activeElement) && heightDelta > 160);
     }
 
     syncKeyboardState();
-    viewport.addEventListener("resize", syncKeyboardState);
-    viewport.addEventListener("scroll", syncKeyboardState);
+    activeViewport.addEventListener("resize", syncKeyboardState);
+    activeViewport.addEventListener("scroll", syncKeyboardState);
     window.addEventListener("focusin", syncKeyboardState);
     window.addEventListener("focusout", syncKeyboardState);
 
     return () => {
-      viewport.removeEventListener("resize", syncKeyboardState);
-      viewport.removeEventListener("scroll", syncKeyboardState);
+      activeViewport.removeEventListener("resize", syncKeyboardState);
+      activeViewport.removeEventListener("scroll", syncKeyboardState);
       window.removeEventListener("focusin", syncKeyboardState);
       window.removeEventListener("focusout", syncKeyboardState);
     };
