@@ -3,7 +3,7 @@ import ChallengeCard from "@/components/ChallengeCard";
 import { loadChallenges } from "@/lib/challenges";
 import type { ChallengeSummary } from "@/lib/types";
 
-export default function HomePage() {
+export default function ChallengesPage() {
   const [challenges, setChallenges] = useState<ChallengeSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
@@ -13,7 +13,9 @@ export default function HomePage() {
 
     async function fetchChallenges() {
       try {
-        const data = await loadChallenges();
+        const data = await loadChallenges({
+          scope: "all",
+        });
 
         if (!isMounted) {
           return;
@@ -30,7 +32,7 @@ export default function HomePage() {
         setErrorMessage(
           error instanceof Error
             ? error.message
-            : "Nao foi possivel carregar os desafios ativos.",
+            : "Nao foi possivel carregar a lista de desafios.",
         );
       } finally {
         if (isMounted) {
@@ -50,12 +52,12 @@ export default function HomePage() {
     <div className="screen-stack">
       <section className="section-block">
         <div className="section-head">
-          <h3 className="section-title">Desafios ativos</h3>
+          <h3 className="section-title">Todos os desafios</h3>
         </div>
 
         {errorMessage ? (
           <section className="empty-state">
-            <h3 className="section-title">Nao foi possivel abrir a largada</h3>
+            <h3 className="section-title">Nao foi possivel listar os desafios</h3>
             <p className="screen-subtitle">{errorMessage}</p>
           </section>
         ) : null}
@@ -64,21 +66,21 @@ export default function HomePage() {
           <section className="empty-state">
             <h3 className="section-title">Carregando desafios</h3>
             <p className="screen-subtitle">
-              Estamos consultando o ranking parcial das equipes.
+              Estamos buscando desafios ativos e inativos.
             </p>
           </section>
         ) : null}
 
         {!errorMessage && !isLoading && challenges.length === 0 ? (
           <section className="empty-state">
-            <h3 className="section-title">Nenhum desafio ativo</h3>
+            <h3 className="section-title">Nenhum desafio cadastrado</h3>
           </section>
         ) : null}
 
         {!errorMessage && !isLoading && challenges.length > 0 ? (
           <div className="card-stack">
             {challenges.map((challenge) => (
-              <ChallengeCard challenge={challenge} key={challenge.id} />
+              <ChallengeCard challenge={challenge} key={challenge.id} showStatusText />
             ))}
           </div>
         ) : null}

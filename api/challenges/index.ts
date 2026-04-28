@@ -7,6 +7,7 @@ import {
   type ApiRequest,
   type ApiResponse,
   badRequest,
+  getRequestUrl,
   methodNotAllowed,
   ok,
   readJsonBody,
@@ -22,7 +23,9 @@ export default async function handler(request: ApiRequest, response: ApiResponse
 
   try {
     if (request.method === "GET") {
-      const challenges = await listChallenges();
+      const scope =
+        getRequestUrl(request).searchParams.get("scope") === "all" ? "all" : "active";
+      const challenges = await listChallenges(scope);
       ok(response, {
         data: challenges,
       });

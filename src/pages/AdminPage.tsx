@@ -1,45 +1,24 @@
 import { FormEvent, useEffect, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   createChallenge,
   loadChallenges,
-  loadTeamDetail,
 } from "@/lib/challenges";
 import { useAuthSession } from "@/lib/auth-context";
-import { ApiError } from "@/lib/api";
-import type { ChallengeSummary, TeamDetail } from "@/lib/types";
-
-function getIntentLabel(intent: string | null) {
-  switch (intent) {
-    case "challenge-create":
-      return "Criar desafio";
-    case "team-add":
-      return "Adicionar equipe";
-    case "participant-add":
-      return "Lancar resultado";
-    default:
-      return "Painel pronto";
-  }
-}
+import type { ChallengeSummary } from "@/lib/types";
 
 export default function AdminPage() {
   const navigate = useNavigate();
-  const { user } = useAuthSession();
-  const [searchParams] = useSearchParams();
-  const intent = searchParams.get("intent");
+  useAuthSession();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [type, setType] = useState<"pace" | "time">("pace");
   const [challenges, setChallenges] = useState<ChallengeSummary[]>([]);
-  const [selectedTeam, setSelectedTeam] = useState<TeamDetail | null>(null);
   const [isDashboardLoading, setIsDashboardLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dashboardErrorMessage, setDashboardErrorMessage] = useState("");
   const [formErrorMessage, setFormErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
-  const challengeId = searchParams.get("challengeId");
-  const challengeTeamId = searchParams.get("challengeTeamId");
-  const intentLabel = getIntentLabel(intent);
 
   useEffect(() => {
     let isMounted = true;
@@ -48,25 +27,13 @@ export default function AdminPage() {
       setIsDashboardLoading(true);
 
       try {
-        const [challengeList, teamDetail] = await Promise.all([
-          loadChallenges(),
-          challengeTeamId
-            ? loadTeamDetail(challengeTeamId).catch((error) => {
-                if (error instanceof ApiError && error.status === 404) {
-                  return null;
-                }
-
-                throw error;
-              })
-            : Promise.resolve(null),
-        ]);
+        const challengeList = await loadChallenges();
 
         if (!isMounted) {
           return;
         }
 
         setChallenges(challengeList);
-        setSelectedTeam(teamDetail);
         setDashboardErrorMessage("");
       } catch (error) {
         if (!isMounted) {
@@ -90,7 +57,7 @@ export default function AdminPage() {
     return () => {
       isMounted = false;
     };
-  }, [challengeTeamId]);
+  }, []);
 
   async function handleCreateChallenge(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -122,15 +89,6 @@ export default function AdminPage() {
 
   return (
     <div className="screen-stack">
-      <section className="summary-card">
-        <p className="card-kicker">Area administrativa</p>
-        <h2 className="screen-title">Painel do administrador</h2>
-        <div className="challenge-card-meta">
-          <span className="metric-chip">{user?.email}</span>
-          <span className="metric-chip metric-chip-accent">{intentLabel}</span>
-        </div>
-      </section>
-
       <section className="section-block">
         <div className="section-head">
           <h3 className="section-title">Acoes principais</h3>
@@ -190,34 +148,6 @@ export default function AdminPage() {
               <p className="support-text support-text-error">{formErrorMessage}</p>
             ) : null}
           </article>
-
-          <article className="challenge-card">
-            <p className="card-kicker">Operacao assistida</p>
-            <h3 className="challenge-card-title">Retomar o proximo passo</h3>
-            <div className="actions-row">
-              {intent === "team-add" && challengeId ? (
-                <Link className="button button-secondary" to={`/challenges/${challengeId}`}>
-                  Abrir desafio selecionado
-                </Link>
-              ) : null}
-              {intent === "participant-add" && selectedTeam ? (
-                <Link className="button button-secondary" to={`/teams/${selectedTeam.id}`}>
-                  Abrir equipe selecionada
-                </Link>
-              ) : null}
-              {!intent || intent === "challenge-create" ? (
-                <Link className="button button-secondary" to="/">
-                  Voltar para a home
-                </Link>
-              ) : null}
-            </div>
-            {selectedTeam ? (
-              <div className="challenge-card-meta">
-                <span className="metric-chip">{selectedTeam.teamName}</span>
-                <span className="metric-chip">{selectedTeam.challengeTitle}</span>
-              </div>
-            ) : null}
-          </article>
         </div>
       </section>
 
@@ -254,29 +184,20 @@ export default function AdminPage() {
         {!isDashboardLoading && !dashboardErrorMessage && challenges.length > 0 ? (
           <div className="dashboard-grid">
             {challenges.map((challenge) => {
-              const isHighlighted = challenge.id === challengeId;
-
               return (
                 <article
-                  className={isHighlighted ? "surface-card surface-card-accent" : "surface-card"}
+                  className="surface-card"
                   key={challenge.id}
                 >
-                  <p className="card-kicker">{challenge.statusLabel}</p>
                   <h3 className="challenge-card-title">{challenge.title}</h3>
-                  <div className="challenge-card-meta">
-                    <span className="metric-chip">{challenge.teamCount} equipes</span>
-                    <span className="metric-chip">{challenge.leaderTeamName}</span>
+                  <div className="admin-card-copy">
+                    <div>{challenge.teamCount} equipes</div>
+                    <div>Lider: {challenge.leaderTeamName}</div>
                   </div>
 
                   <div className="actions-row">
                     <Link className="button button-secondary button-compact" to={`/challenges/${challenge.id}`}>
-                      Ver ranking
-                    </Link>
-                    <Link
-                      className="button button-secondary button-compact"
-                      to={`/admin?intent=team-add&challengeId=${encodeURIComponent(challenge.id)}`}
-                    >
-                      Preparar equipe
+                      Editar
                     </Link>
                   </div>
                 </article>

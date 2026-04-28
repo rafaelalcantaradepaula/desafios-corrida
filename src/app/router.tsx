@@ -3,6 +3,7 @@ import RequireAdmin from "@/components/RequireAdmin";
 import AppShell from "@/layouts/AppShell";
 import AdminPage from "@/pages/AdminPage";
 import ChallengePage from "@/pages/ChallengePage";
+import ChallengesPage from "@/pages/ChallengesPage";
 import HomePage from "@/pages/HomePage";
 import LoginPage from "@/pages/LoginPage";
 import NotFoundPage from "@/pages/NotFoundPage";
@@ -16,6 +17,10 @@ export const router = createBrowserRouter([
       {
         index: true,
         element: <HomePage />,
+      },
+      {
+        path: "challenges",
+        element: <ChallengesPage />,
       },
       {
         path: "challenges/:challengeId",

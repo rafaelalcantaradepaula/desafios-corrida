@@ -1,34 +1,43 @@
 import { Link } from "react-router-dom";
 import { formatChallengeTypeLabel } from "@/lib/format";
 import type { ChallengeSummary } from "@/lib/types";
-import MetricChip from "./MetricChip";
 
 type ChallengeCardProps = {
   challenge: ChallengeSummary;
+  showStatusText?: boolean;
 };
 
-export default function ChallengeCard({ challenge }: ChallengeCardProps) {
+export default function ChallengeCard({
+  challenge,
+  showStatusText = false,
+}: ChallengeCardProps) {
   return (
     <article className="challenge-card">
       <div className="challenge-card-header">
         <div>
-          <p className="card-kicker">{formatChallengeTypeLabel(challenge.type)}</p>
+          {showStatusText ? (
+            <p className="challenge-card-state">{challenge.statusLabel}</p>
+          ) : null}
           <h2 className="challenge-card-title">{challenge.title}</h2>
         </div>
-
-        <MetricChip text={challenge.statusLabel} tone="accent" />
       </div>
 
-      <div className="challenge-card-meta">
-        <MetricChip text={`${challenge.teamCount} equipes`} />
-        <MetricChip text={challenge.leaderTeamName} />
-        <MetricChip text={challenge.leaderResultLabel} />
-      </div>
+      <div className="challenge-card-meta challenge-card-meta-split">
+        <div className="challenge-card-summary">
+          <span className="challenge-card-text">{formatChallengeTypeLabel(challenge.type)}</span>
+          <span className="challenge-card-text">{challenge.teamCount} equipes</span>
+          <span className="challenge-card-text">{challenge.leaderTeamName}</span>
+        </div>
 
-      <div className="challenge-card-footer">
-        <Link className="button button-secondary" to={`/challenges/${challenge.id}`}>
-          Abrir ranking
-        </Link>
+        <div className="challenge-card-action">
+          <strong className="challenge-card-result">{challenge.leaderResultLabel}</strong>
+          <Link
+            className="button button-secondary button-compact challenge-card-open"
+            to={`/challenges/${challenge.id}`}
+          >
+            abrir
+          </Link>
+        </div>
       </div>
     </article>
   );

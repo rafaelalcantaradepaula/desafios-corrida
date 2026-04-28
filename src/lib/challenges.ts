@@ -11,13 +11,19 @@ type ApiEnvelope<T> = {
   data: T;
 };
 
-export async function loadChallenges() {
+export async function loadChallenges(options?: { scope?: "active" | "all" }) {
+  const scope = options?.scope === "all" ? "all" : "active";
+
   try {
-    const response = await apiFetch<ApiEnvelope<ChallengeSummary[]>>("/challenges");
+    const response = await apiFetch<ApiEnvelope<ChallengeSummary[]>>(
+      scope === "all" ? "/challenges?scope=all" : "/challenges",
+    );
     return response.data;
   } catch (error) {
     if (appEnv.useMockData) {
-      return mockChallenges;
+      return scope === "all"
+        ? mockChallenges
+        : mockChallenges.filter((challenge) => challenge.status === "active");
     }
 
     throw error;

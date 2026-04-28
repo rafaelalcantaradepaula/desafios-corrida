@@ -105,15 +105,8 @@ textarea {
 }
 
 .topbar {
-  align-items: flex-start;
+  align-items: center;
   margin-bottom: 24px;
-}
-
-.topbar-actions {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 10px;
 }
 
 .challenge-card-header,
@@ -147,6 +140,14 @@ textarea {
   font-size: 1.4rem;
 }
 
+.topbar-user {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-align: right;
+}
+
 .screen-title {
   font-size: clamp(1.7rem, 4vw, 2.45rem);
   line-height: 1.04;
@@ -162,8 +163,7 @@ textarea {
 .challenge-card-copy,
 .ranking-meta,
 .roster-meta,
-.support-text,
-.topbar-note {
+.support-text {
   margin: 0;
   color: var(--muted);
   line-height: 1.55;
@@ -222,27 +222,6 @@ textarea {
   background: linear-gradient(180deg, rgba(11, 25, 36, 0.98), rgba(8, 20, 29, 0.96));
   box-shadow: var(--shadow);
   backdrop-filter: blur(18px);
-}
-
-.hero-card {
-  position: relative;
-  overflow: hidden;
-}
-
-.hero-card::after {
-  content: "";
-  position: absolute;
-  top: -22px;
-  right: -22px;
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, rgba(240, 90, 40, 0.3), rgba(113, 216, 182, 0.04));
-}
-
-.hero-copy {
-  position: relative;
-  z-index: 1;
 }
 
 .actions-row,
@@ -317,6 +296,58 @@ textarea {
 }
 
 .challenge-card-meta {
+  margin-top: 12px;
+}
+
+.challenge-card-meta-split {
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.challenge-card-summary {
+  display: flex;
+  flex-wrap: wrap;
+  flex: 1 1 auto;
+  gap: 8px 14px;
+  min-width: 0;
+}
+
+.challenge-card-text,
+.challenge-card-state,
+.admin-card-copy {
+  color: var(--muted);
+}
+
+.challenge-card-state {
+  margin: 0 0 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.challenge-card-action {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-left: auto;
+}
+
+.challenge-card-result {
+  font-weight: 700;
+}
+
+.challenge-card-open {
+  white-space: nowrap;
+}
+
+.admin-card-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   margin-top: 12px;
 }
 
@@ -701,9 +732,15 @@ textarea {
     text-align: left;
   }
 
-  .topbar-actions {
+  .challenge-card-meta-split {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .challenge-card-action {
     width: 100%;
-    align-items: stretch;
+    justify-content: space-between;
+    margin-left: 0;
   }
 
   .summary-grid,

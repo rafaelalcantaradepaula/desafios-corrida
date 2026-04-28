@@ -1,4 +1,4 @@
-import { Link, NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuthSession } from "@/lib/auth-context";
 
 function navClassName(isActive: boolean) {
@@ -6,8 +6,9 @@ function navClassName(isActive: boolean) {
 }
 
 export default function AppShell() {
+  const location = useLocation();
   const { user } = useAuthSession();
-  const adminTarget = user ? "/admin" : "/login";
+  const isAdminRoute = location.pathname.startsWith("/admin");
 
   return (
     <div className="app-shell">
@@ -17,18 +18,10 @@ export default function AppShell() {
       <div className="app-frame">
         <header className="topbar">
           <div>
-            <p className="eyebrow">{user ? "Admin" : "Ranking"}</p>
             <h1 className="brand-title">Desafios de corrida</h1>
           </div>
 
-          <div className="topbar-actions">
-            <div className="status-pill">
-              {user ? "Sessao ativa" : "Consulta publica"}
-            </div>
-            <Link className="button button-secondary button-compact" to={adminTarget}>
-              {user ? "Abrir painel" : "Entrar"}
-            </Link>
-          </div>
+          {isAdminRoute && user ? <p className="topbar-user">{user.name}</p> : null}
         </header>
 
         <main className="screen">
@@ -41,11 +34,11 @@ export default function AppShell() {
           </NavLink>
           <NavLink
             className={({ isActive }) => navClassName(isActive)}
-            to="/challenges/orla-5k"
+            to="/challenges"
           >
-            Desafio
+            Desafios
           </NavLink>
-          <NavLink className={({ isActive }) => navClassName(isActive)} to={adminTarget}>
+          <NavLink className={({ isActive }) => navClassName(isActive)} to={user ? "/admin" : "/login"}>
             Admin
           </NavLink>
         </nav>

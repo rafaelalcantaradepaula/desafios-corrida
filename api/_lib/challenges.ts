@@ -424,12 +424,13 @@ function buildChallengeSummary(
   };
 }
 
-export async function listChallenges() {
+export async function listChallenges(scope: "active" | "all" = "active") {
   if (!getServerEnv().hasDatabaseUrl) {
     return [] as ChallengeSummary[];
   }
 
-  const challenges = await getChallengeRows("active");
+  const challenges =
+    scope === "all" ? await getChallengeRows() : await getChallengeRows("active");
   const standingRows = await getStandingRows(challenges.map((challenge) => challenge.id));
 
   return challenges.map((challenge) =>
