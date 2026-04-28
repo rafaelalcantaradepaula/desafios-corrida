@@ -313,7 +313,8 @@ textarea {
 }
 
 .challenge-card-link,
-.ranking-row-link {
+.ranking-row-link,
+.surface-card-link {
   transition:
     transform 160ms ease,
     border-color 160ms ease,
@@ -324,7 +325,9 @@ textarea {
 .challenge-card-link:hover,
 .challenge-card-link:focus-visible,
 .ranking-row-link:hover,
-.ranking-row-link:focus-visible {
+.ranking-row-link:focus-visible,
+.surface-card-link:hover,
+.surface-card-link:focus-visible {
   transform: translateY(-1px);
   border-color: rgba(113, 216, 182, 0.3);
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.24);
@@ -509,11 +512,6 @@ textarea {
 
 .challenge-card-result {
   font-weight: 700;
-}
-
-.challenge-card-open {
-  white-space: nowrap;
-  pointer-events: none;
 }
 
 .admin-card-copy {

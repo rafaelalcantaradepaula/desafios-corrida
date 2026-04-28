@@ -167,22 +167,17 @@ export default function AdminPage() {
           <div className="dashboard-grid">
             {challenges.map((challenge) => {
               return (
-                <article
-                  className={`surface-card surface-card-tone-${challenge.type}`}
+                <Link
+                  className={`surface-card surface-card-link surface-card-tone-${challenge.type}`}
                   key={challenge.id}
+                  to={`/challenges/${challenge.id}`}
                 >
                   <h3 className="challenge-card-title">{challenge.title}</h3>
                   <div className="admin-card-copy">
                     <div>{challenge.teamCount} equipes</div>
                     <div>Lider: {challenge.leaderTeamName}</div>
                   </div>
-
-                  <div className="actions-row">
-                    <Link className="button button-secondary button-compact" to={`/challenges/${challenge.id}`}>
-                      Editar
-                    </Link>
-                  </div>
-                </article>
+                </Link>
               );
             })}
           </div>

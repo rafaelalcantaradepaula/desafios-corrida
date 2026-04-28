@@ -57,9 +57,6 @@ export default function ChallengeCard({
           ) : null}
           <strong className="challenge-card-result">{resultLabel}</strong>
         </div>
-        <span className="button button-secondary button-compact challenge-card-open">
-          abrir
-        </span>
       </div>
 
       <p className="challenge-card-track">
