@@ -140,12 +140,24 @@ textarea {
   font-size: 1.4rem;
 }
 
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
 .topbar-user {
   margin: 0;
   color: var(--muted);
   font-size: 0.95rem;
   font-weight: 700;
   text-align: right;
+}
+
+.topbar-logout {
+  min-height: 38px;
+  padding: 0 14px;
 }
 
 .screen-title {
@@ -1276,6 +1288,12 @@ textarea {
   .challenge-card-primary {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .topbar-actions {
+    width: 100%;
+    justify-content: space-between;
+    margin-left: 0;
   }
 
   .challenge-card-type {

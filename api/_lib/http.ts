@@ -105,11 +105,20 @@ export function badRequest(response: ApiResponse, message: string) {
   });
 }
 
-export function unauthorized(response: ApiResponse, message = "Authentication required.") {
-  json(response, 401, {
-    error: "unauthorized",
-    message,
-  });
+export function unauthorized(
+  response: ApiResponse,
+  message = "Authentication required.",
+  headers?: ResponseHeaders,
+) {
+  json(
+    response,
+    401,
+    {
+      error: "unauthorized",
+      message,
+    },
+    headers,
+  );
 }
 
 export function notFound(response: ApiResponse, message = "Resource not found.") {

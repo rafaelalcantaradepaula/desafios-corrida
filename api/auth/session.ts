@@ -1,4 +1,7 @@
-import { getAuthenticatedAdmin } from "../_lib/auth.js";
+import {
+  clearSessionCookie,
+  readAuthenticatedAdminSession,
+} from "../_lib/auth.js";
 import {
   type ApiRequest,
   type ApiResponse,
@@ -15,16 +18,24 @@ export default async function handler(request: ApiRequest, response: ApiResponse
   }
 
   try {
-    const user = await getAuthenticatedAdmin(request);
+    const session = await readAuthenticatedAdminSession(request);
 
-    if (!user) {
-      unauthorized(response);
+    if (!session) {
+      unauthorized(response, "Sessao administrativa expirada.", {
+        "Set-Cookie": clearSessionCookie(),
+      });
       return;
     }
 
-    ok(response, {
-      user,
-    });
+    ok(
+      response,
+      {
+        user: session.user,
+      },
+      {
+        "Set-Cookie": session.cookie,
+      },
+    );
     return;
   } catch (error) {
     serverError(

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
-import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuthSession } from "@/lib/auth-context";
+import { logoutAdmin } from "@/lib/auth";
+import { useToast } from "@/lib/toast-context";
 
 function navClassName(isActive: boolean) {
   return isActive ? "bottom-nav-link bottom-nav-link-active" : "bottom-nav-link";
@@ -71,10 +73,23 @@ function ShieldIcon() {
 }
 
 export default function AppShell() {
+  const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuthSession();
+  const { setAuthenticatedUser, user } = useAuthSession();
+  const { showToast } = useToast();
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
   const isAdminRoute = location.pathname.startsWith("/admin");
+
+  async function handleLogout() {
+    try {
+      await logoutAdmin();
+      setAuthenticatedUser(null);
+      showToast("Sessao encerrada.", "success");
+      navigate("/login", { replace: true });
+    } catch {
+      showToast("Nao foi possivel encerrar a sessao atual.", "error");
+    }
+  }
 
   useEffect(() => {
     const viewport = window.visualViewport;
@@ -124,7 +139,18 @@ export default function AppShell() {
             <h1 className="brand-title">Desafios de corrida</h1>
           </div>
 
-          {isAdminRoute && user ? <p className="topbar-user">{user.name}</p> : null}
+          {user ? (
+            <div className="topbar-actions">
+              {isAdminRoute ? <p className="topbar-user">{user.name}</p> : null}
+              <button
+                className="button button-secondary button-compact topbar-logout"
+                onClick={() => void handleLogout()}
+                type="button"
+              >
+                Logout
+              </button>
+            </div>
+          ) : null}
         </header>
 
         <main className="screen">

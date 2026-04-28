@@ -5,7 +5,7 @@ import type { ApiRequest } from "./http.js";
 const SESSION_COOKIE_NAME = "dc_admin_session";
 const PASSWORD_ALGORITHM = "pbkdf2_sha256";
 const PASSWORD_ITERATIONS = 120000;
-const SESSION_DURATION_MS = 1000 * 60 * 60 * 24 * 7;
+const SESSION_IDLE_TIMEOUT_MS = 1000 * 60 * 5;
 const BOOTSTRAP_ADMIN_ID = "usr_admin_bootstrap";
 const BOOTSTRAP_ADMIN_NAME = "Administrador Inicial";
 const BOOTSTRAP_ADMIN_EMAIL = "admin@desafioscorrida.local";
@@ -202,7 +202,7 @@ export function clearSessionCookie() {
 }
 
 export async function createAdminSession(user: AdminUser) {
-  const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
+  const expiresAt = new Date(Date.now() + SESSION_IDLE_TIMEOUT_MS);
   const token = createSessionToken(user, expiresAt);
 
   return {
@@ -212,18 +212,35 @@ export async function createAdminSession(user: AdminUser) {
   };
 }
 
-export async function deleteAdminSession(sessionToken: string | null) {
-  void sessionToken;
-}
-
-export async function getAuthenticatedAdmin(request: ApiRequest): Promise<AdminUser | null> {
+export async function readAuthenticatedAdminSession(request: ApiRequest) {
   const token = parseCookies(getCookieHeader(request)).get(SESSION_COOKIE_NAME);
 
   if (!token) {
     return null;
   }
 
-  return verifySessionToken(token);
+  const user = verifySessionToken(token);
+
+  if (!user) {
+    return null;
+  }
+
+  const session = await createAdminSession(user);
+
+  return {
+    user,
+    cookie: session.cookie,
+    expiresAt: session.expiresAt,
+  };
+}
+
+export async function deleteAdminSession(sessionToken: string | null) {
+  void sessionToken;
+}
+
+export async function getAuthenticatedAdmin(request: ApiRequest): Promise<AdminUser | null> {
+  const session = await readAuthenticatedAdminSession(request);
+  return session?.user ?? null;
 }
 
 export async function authenticateAdmin(email: string, password: string) {
