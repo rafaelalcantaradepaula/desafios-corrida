@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import type { KeyboardEvent } from "react";
 
 type FloatingNumberPickerProps = {
   label: string;
@@ -13,95 +13,77 @@ export default function FloatingNumberPicker({
   options,
   value,
 }: FloatingNumberPickerProps) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const menuRef = useRef<HTMLDivElement | null>(null);
-  const [isOpen, setIsOpen] = useState(false);
+  const selectedIndex = Math.max(0, options.indexOf(value));
+  const canDecrease = selectedIndex > 0;
+  const canIncrease = selectedIndex < options.length - 1;
 
-  useEffect(() => {
-    if (!isOpen) {
+  function updateAtIndex(nextIndex: number) {
+    const nextValue = options[nextIndex];
+
+    if (nextValue) {
+      onChange(nextValue);
+    }
+  }
+
+  function handleStep(direction: "up" | "down") {
+    if (direction === "up" && canIncrease) {
+      updateAtIndex(selectedIndex + 1);
       return;
     }
 
-    function handlePointerDown(event: PointerEvent) {
-      if (!containerRef.current?.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
+    if (direction === "down" && canDecrease) {
+      updateAtIndex(selectedIndex - 1);
     }
+  }
 
-    function handleEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setIsOpen(false);
-      }
-    }
-
-    document.addEventListener("pointerdown", handlePointerDown);
-    document.addEventListener("keydown", handleEscape);
-
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (!isOpen) {
+  function handleKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
+    if (event.key === "ArrowUp" || event.key === "ArrowRight") {
+      event.preventDefault();
+      handleStep("up");
       return;
     }
 
-    const selectedOption = menuRef.current?.querySelector<HTMLButtonElement>(
-      `[data-option="${value}"]`,
-    );
-
-    selectedOption?.scrollIntoView({
-      block: "center",
-    });
-  }, [isOpen, value]);
+    if (event.key === "ArrowDown" || event.key === "ArrowLeft") {
+      event.preventDefault();
+      handleStep("down");
+    }
+  }
 
   return (
-    <div className="floating-picker" ref={containerRef}>
+    <div
+      aria-label={`Seletor de ${label}`}
+      className="floating-picker"
+      role="group"
+    >
       <button
-        aria-expanded={isOpen}
-        aria-haspopup="listbox"
+        aria-label={`Aumentar ${label}`}
+        className="floating-picker-arrow"
+        disabled={!canIncrease}
+        onClick={() => handleStep("up")}
+        type="button"
+      >
+        <span aria-hidden="true">▲</span>
+      </button>
+
+      <button
+        aria-label={`Valor atual de ${label}`}
         className="floating-picker-trigger"
-        onClick={() => setIsOpen((currentValue) => !currentValue)}
+        onKeyDown={handleKeyDown}
         type="button"
       >
         <span className="floating-picker-value">{value}</span>
         <span className="floating-picker-unit">{label}</span>
       </button>
 
-      {isOpen ? (
-        <div
-          aria-label={label}
-          className="floating-picker-menu"
-          ref={menuRef}
-          role="listbox"
-        >
-          {options.map((option) => {
-            const isSelected = option === value;
-
-            return (
-              <button
-                className={
-                  isSelected
-                    ? "floating-picker-option floating-picker-option-selected"
-                    : "floating-picker-option"
-                }
-                data-option={option}
-                key={`${label}-${option}`}
-                onClick={() => {
-                  onChange(option);
-                  setIsOpen(false);
-                }}
-                role="option"
-                type="button"
-              >
-                {option}
-              </button>
-            );
-          })}
-        </div>
-      ) : null}
+      <button
+        aria-label={`Diminuir ${label}`}
+        className="floating-picker-arrow"
+        disabled={!canDecrease}
+        onClick={() => handleStep("down")}
+        type="button"
+      >
+        <span aria-hidden="true">▼</span>
+      </button>
     </div>
   );
 }
