@@ -565,6 +565,34 @@ export async function addTeamToChallenge(challengeId: string, name: string) {
   return getChallengeDetailById(challengeId);
 }
 
+export async function updateChallengeStatusRecord(
+  challengeId: string,
+  status: Extract<ChallengeStatus, "active" | "finished">,
+) {
+  await ensureDataBootstrap();
+
+  const db = getDb();
+  const challengeRows = (await db`
+    SELECT id
+    FROM challenges
+    WHERE id = ${challengeId}
+    LIMIT 1
+  `) as RawChallengeTeamLookup[];
+
+  if (!challengeRows[0]) {
+    return null;
+  }
+
+  await db`
+    UPDATE challenges
+    SET status = ${status},
+        updated_at = NOW()
+    WHERE id = ${challengeId}
+  `;
+
+  return getChallengeDetailById(challengeId);
+}
+
 export async function addParticipantToTeam(challengeTeamId: string, name: string) {
   await ensureDataBootstrap();
 

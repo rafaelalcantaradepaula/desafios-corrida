@@ -91,6 +91,24 @@ export async function addTeam(challengeId: string, name: string) {
   return response.data;
 }
 
+export async function updateChallengeStatus(
+  challengeId: string,
+  status: "active" | "finished",
+) {
+  const response = await apiFetch<ApiEnvelope<ChallengeDetail | null>>(
+    `/challenges/${challengeId}`,
+    {
+      method: "PATCH",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ status }),
+    },
+  );
+
+  return response.data;
+}
+
 export async function addParticipant(challengeTeamId: string, name: string) {
   const response = await apiFetch<ApiEnvelope<TeamDetail | null>>(
     `/challenge-teams/${challengeTeamId}/participants`,

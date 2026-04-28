@@ -563,6 +563,17 @@ textarea {
   gap: 16px;
 }
 
+.summary-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.summary-card-title-block {
+  min-width: 0;
+}
+
 .summary-card-tone-pace {
   background:
     radial-gradient(circle at top right, rgba(113, 216, 182, 0.14), transparent 34%),
@@ -623,6 +634,89 @@ textarea {
   font-size: 1rem;
   font-weight: 800;
   line-height: 1.1;
+}
+
+.status-toggle {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 10px;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.status-toggle-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.status-toggle-track {
+  position: relative;
+  flex: 0 0 auto;
+  width: 46px;
+  height: 28px;
+  border: 1px solid rgba(159, 198, 211, 0.28);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease;
+}
+
+.status-toggle-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: rgba(239, 248, 251, 0.9);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.28);
+  transition: transform 140ms ease;
+}
+
+.status-toggle-input:checked + .status-toggle-track {
+  border-color: rgba(113, 216, 182, 0.42);
+  background: rgba(113, 216, 182, 0.22);
+}
+
+.status-toggle-input:checked + .status-toggle-track .status-toggle-thumb {
+  transform: translateX(18px);
+  background: #b8f2df;
+}
+
+.status-toggle-input:focus-visible + .status-toggle-track {
+  box-shadow: 0 0 0 3px rgba(113, 216, 182, 0.18);
+}
+
+.status-toggle-input:disabled + .status-toggle-track,
+.status-toggle-input:disabled ~ .status-toggle-copy {
+  opacity: 0.68;
+}
+
+.status-toggle-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+}
+
+.status-toggle-label {
+  color: var(--text);
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.status-toggle-state {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .summary-grid {
@@ -1285,7 +1379,8 @@ textarea {
   }
 
   .challenge-card-header,
-  .challenge-card-primary {
+  .challenge-card-primary,
+  .summary-card-head {
     align-items: flex-start;
     flex-direction: column;
   }

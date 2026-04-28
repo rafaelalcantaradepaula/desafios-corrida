@@ -3,7 +3,11 @@ import { Link, useParams } from "react-router-dom";
 import { RankingSkeleton, SummarySkeleton } from "@/components/LoadingSkeletons";
 import { useAuthSession } from "@/lib/auth-context";
 import { ApiError } from "@/lib/api";
-import { addTeam, loadChallengeDetail } from "@/lib/challenges";
+import {
+  addTeam,
+  loadChallengeDetail,
+  updateChallengeStatus,
+} from "@/lib/challenges";
 import { useToast } from "@/lib/toast-context";
 import { formatChallengeTypeLabel } from "@/lib/format";
 import type { ChallengeDetail } from "@/lib/types";
@@ -52,6 +56,7 @@ export default function ChallengePage() {
   const [teamName, setTeamName] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
@@ -133,6 +138,38 @@ export default function ChallengePage() {
     }
   }
 
+  async function handleStatusToggle(isActive: boolean) {
+    if (!challenge || isUpdatingStatus) {
+      return;
+    }
+
+    const nextStatus = isActive ? "active" : "finished";
+
+    setIsUpdatingStatus(true);
+    setErrorMessage("");
+
+    try {
+      const updatedChallenge = await updateChallengeStatus(challenge.id, nextStatus);
+
+      if (!updatedChallenge) {
+        showToast("Desafio nao encontrado para atualizar status.", "error");
+        return;
+      }
+
+      setChallenge(updatedChallenge);
+      showToast(isActive ? "Desafio ativado." : "Desafio inativado.", "success");
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Nao foi possivel atualizar o status do desafio.",
+        "error",
+      );
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  }
+
   if (errorMessage && !challenge && !isLoading) {
     return (
       <section className="empty-state">
@@ -175,8 +212,33 @@ export default function ChallengePage() {
   return (
     <div className="screen-stack">
       <section className={`summary-card summary-card-compact summary-card-tone-${challenge.type}`}>
-        <p className="card-kicker">{formatChallengeTypeLabel(challenge.type)}</p>
-        <h2 className="screen-title">{challenge.title}</h2>
+        <div className="summary-card-head">
+          <div className="summary-card-title-block">
+            <p className="card-kicker">{formatChallengeTypeLabel(challenge.type)}</p>
+            <h2 className="screen-title">{challenge.title}</h2>
+          </div>
+
+          {user ? (
+            <label className="status-toggle">
+              <input
+                checked={challenge.status === "active"}
+                className="status-toggle-input"
+                disabled={isUpdatingStatus}
+                onChange={(event) => void handleStatusToggle(event.target.checked)}
+                type="checkbox"
+              />
+              <span className="status-toggle-track" aria-hidden="true">
+                <span className="status-toggle-thumb" />
+              </span>
+              <span className="status-toggle-copy">
+                <span className="status-toggle-label">Desafio ativo</span>
+                <span className="status-toggle-state">
+                  {isUpdatingStatus ? "Atualizando..." : challenge.statusLabel}
+                </span>
+              </span>
+            </label>
+          ) : null}
+        </div>
 
         <div className="summary-strip">
           <div className="summary-pill">
