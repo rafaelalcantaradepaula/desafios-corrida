@@ -24,6 +24,17 @@ export const mockChallenges: ChallengeSummary[] = [
     leaderTeamName: "Pulso Forte",
     leaderResultLabel: "03:51:42",
   },
+  {
+    id: "centro-noturno-8k",
+    title: "Centro Noturno 8K",
+    description: "Desafio encerrado com foco em pace coletivo nas ruas centrais.",
+    type: "pace",
+    status: "finished",
+    statusLabel: "Encerrado",
+    teamCount: 3,
+    leaderTeamName: "Nucleo Sul",
+    leaderResultLabel: "4:48 /km",
+  },
 ];
 
 const challengeDetails: Record<string, ChallengeDetail> = {
@@ -104,6 +115,40 @@ const challengeDetails: Record<string, ChallengeDetail> = {
       },
     ],
   },
+  "centro-noturno-8k": {
+    ...mockChallenges[2],
+    rankingTitle: "Ranking das equipes",
+    rankingSummary: "A media de pace considera apenas participantes com resultado acima de zero.",
+    teams: [
+      {
+        challengeTeamId: "nucleo-sul",
+        name: "Nucleo Sul",
+        memberCount: 6,
+        position: 1,
+        resultSeconds: 288,
+        resultLabel: "4:48 /km",
+        highlight: "equipe completa",
+      },
+      {
+        challengeTeamId: "trilha-urbana",
+        name: "Trilha Urbana",
+        memberCount: 6,
+        position: 2,
+        resultSeconds: 296,
+        resultLabel: "4:56 /km",
+        highlight: "equipe completa",
+      },
+      {
+        challengeTeamId: "vento-leste",
+        name: "Vento Leste",
+        memberCount: 5,
+        position: 3,
+        resultSeconds: 305,
+        resultLabel: "5:05 /km",
+        highlight: "equipe completa",
+      },
+    ],
+  },
 };
 
 const teamDetails: Record<string, TeamDetail> = {
@@ -137,6 +182,42 @@ const teamDetails: Record<string, TeamDetail> = {
       { id: "pf-6", name: "Lara", resultSeconds: 1715, resultLabel: formatResultByType("time", 1715) },
       { id: "pf-7", name: "Nina", resultSeconds: 1750, resultLabel: formatResultByType("time", 1750) },
       { id: "pf-8", name: "Rafael", resultSeconds: 1775, resultLabel: formatResultByType("time", 1775) },
+    ],
+  },
+  "nucleo-sul": {
+    id: "nucleo-sul",
+    challengeId: "centro-noturno-8k",
+    challengeTitle: "Centro Noturno 8K",
+    challengeType: "pace",
+    teamName: "Nucleo Sul",
+    participants: [
+      { id: "ns-1", name: "Cora", resultSeconds: 286, resultLabel: formatResultByType("pace", 286) },
+      { id: "ns-2", name: "Luca", resultSeconds: 289, resultLabel: formatResultByType("pace", 289) },
+      { id: "ns-3", name: "Mila", resultSeconds: 290, resultLabel: formatResultByType("pace", 290) },
+    ],
+  },
+  "trilha-urbana": {
+    id: "trilha-urbana",
+    challengeId: "centro-noturno-8k",
+    challengeTitle: "Centro Noturno 8K",
+    challengeType: "pace",
+    teamName: "Trilha Urbana",
+    participants: [
+      { id: "tu-1", name: "Breno", resultSeconds: 294, resultLabel: formatResultByType("pace", 294) },
+      { id: "tu-2", name: "Nina", resultSeconds: 297, resultLabel: formatResultByType("pace", 297) },
+      { id: "tu-3", name: "Yuri", resultSeconds: 298, resultLabel: formatResultByType("pace", 298) },
+    ],
+  },
+  "vento-leste": {
+    id: "vento-leste",
+    challengeId: "centro-noturno-8k",
+    challengeTitle: "Centro Noturno 8K",
+    challengeType: "pace",
+    teamName: "Vento Leste",
+    participants: [
+      { id: "vl-1", name: "Dora", resultSeconds: 304, resultLabel: formatResultByType("pace", 304) },
+      { id: "vl-2", name: "Enio", resultSeconds: 306, resultLabel: formatResultByType("pace", 306) },
+      { id: "vl-3", name: "Tais", resultSeconds: 305, resultLabel: formatResultByType("pace", 305) },
     ],
   },
 };

@@ -1,14 +1,17 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { DashboardSkeleton } from "@/components/LoadingSkeletons";
 import {
   createChallenge,
   loadChallenges,
 } from "@/lib/challenges";
 import { useAuthSession } from "@/lib/auth-context";
+import { useToast } from "@/lib/toast-context";
 import type { ChallengeSummary } from "@/lib/types";
 
 export default function AdminPage() {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   useAuthSession();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -18,7 +21,6 @@ export default function AdminPage() {
   const [isDashboardLoading, setIsDashboardLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dashboardErrorMessage, setDashboardErrorMessage] = useState("");
-  const [formErrorMessage, setFormErrorMessage] = useState("");
 
   useEffect(() => {
     let isMounted = true;
@@ -62,7 +64,6 @@ export default function AdminPage() {
   async function handleCreateChallenge(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsSubmitting(true);
-    setFormErrorMessage("");
 
     try {
       const challenge = await createChallenge({
@@ -74,12 +75,14 @@ export default function AdminPage() {
       setTitle("");
       setDescription("");
       setIsCreateOpen(false);
+      showToast("Desafio criado. Abrindo edicao.", "success");
       navigate(`/challenges/${challenge.id}`);
     } catch (error) {
-      setFormErrorMessage(
+      showToast(
         error instanceof Error
           ? error.message
           : "Nao foi possivel criar o desafio.",
+        "error",
       );
     } finally {
       setIsSubmitting(false);
@@ -139,21 +142,10 @@ export default function AdminPage() {
                 {isSubmitting ? "Criando..." : "Criar desafio"}
               </button>
             </form>
-
-            {formErrorMessage ? (
-              <p className="support-text support-text-error">{formErrorMessage}</p>
-            ) : null}
           </article>
         ) : null}
 
-        {isDashboardLoading ? (
-          <section className="empty-state">
-            <h3 className="section-title">Carregando painel</h3>
-            <p className="screen-subtitle">
-              Estamos buscando desafios ativos e atalhos administrativos.
-            </p>
-          </section>
-        ) : null}
+        {isDashboardLoading ? <DashboardSkeleton /> : null}
 
         {!isDashboardLoading && dashboardErrorMessage ? (
           <section className="empty-state">
@@ -176,7 +168,7 @@ export default function AdminPage() {
             {challenges.map((challenge) => {
               return (
                 <article
-                  className="surface-card"
+                  className={`surface-card surface-card-tone-${challenge.type}`}
                   key={challenge.id}
                 >
                   <h3 className="challenge-card-title">{challenge.title}</h3>

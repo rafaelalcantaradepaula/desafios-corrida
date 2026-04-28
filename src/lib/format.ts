@@ -29,10 +29,10 @@ export function formatResultByType(
   hasResult = true,
 ) {
   if (type === "pace") {
-    return hasResult ? formatPace(seconds) : "Sem pace";
+    return hasResult ? formatPace(seconds) : "Aguardando pace";
   }
 
-  return formatDuration(seconds);
+  return hasResult ? formatDuration(seconds) : "Aguardando tempo";
 }
 
 export function secondsToTimeParts(totalSeconds: number): TimeParts {

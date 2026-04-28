@@ -1,49 +1,36 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { loginAdmin, logoutAdmin } from "@/lib/auth";
 import { useAuthSession } from "@/lib/auth-context";
+import { useToast } from "@/lib/toast-context";
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { isLoading: isSessionLoading, setAuthenticatedUser, user } = useAuthSession();
+  const { showToast } = useToast();
   const [email, setEmail] = useState("admin@desafioscorrida.local");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [sessionMessage, setSessionMessage] = useState("Verificando sessao...");
   const redirectTo = searchParams.get("redirect") || "/admin";
-
-  useEffect(() => {
-    if (isSessionLoading) {
-      setSessionMessage("Verificando sessao...");
-      return;
-    }
-
-    if (user) {
-      setSessionMessage(`Sessao ativa para ${user.email}.`);
-      return;
-    }
-
-    setSessionMessage("Nenhuma sessao administrativa ativa.");
-  }, [isSessionLoading, user]);
+  const destinationLabel = redirectTo === "/admin" ? "Painel administrativo" : "Fluxo protegido";
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsLoading(true);
-    setErrorMessage("");
 
     try {
       const response = await loginAdmin(email, password);
       setAuthenticatedUser(response.user);
-      setSessionMessage(`Sessao iniciada para ${response.user.email}.`);
       setPassword("");
+      showToast("Sessao iniciada.", "success");
       navigate(redirectTo, { replace: true });
     } catch (error) {
-      setErrorMessage(
+      showToast(
         error instanceof Error
           ? error.message
           : "Falha inesperada ao autenticar.",
+        "error",
       );
     } finally {
       setIsLoading(false);
@@ -52,14 +39,13 @@ export default function LoginPage() {
 
   async function handleLogout() {
     setIsLoading(true);
-    setErrorMessage("");
 
     try {
       await logoutAdmin();
       setAuthenticatedUser(null);
-      setSessionMessage("Sessao encerrada.");
+      showToast("Sessao encerrada.", "success");
     } catch {
-      setErrorMessage("Nao foi possivel encerrar a sessao atual.");
+      showToast("Nao foi possivel encerrar a sessao atual.", "error");
     } finally {
       setIsLoading(false);
     }
@@ -67,64 +53,88 @@ export default function LoginPage() {
 
   return (
     <div className="screen-stack">
-      <section className="summary-card">
+      <section className="summary-card summary-card-compact">
         <p className="card-kicker">Autenticacao</p>
         <h2 className="screen-title">Acesso administrativo</h2>
+        <div className="summary-strip">
+          <div className="summary-pill">
+            <span className="summary-pill-label">Destino</span>
+            <strong className="summary-pill-value">{destinationLabel}</strong>
+          </div>
+          <div className="summary-pill">
+            <span className="summary-pill-label">Sessao</span>
+            <strong className="summary-pill-value">
+              {isSessionLoading ? "Verificando" : user ? "Ativa" : "Inativa"}
+            </strong>
+          </div>
+        </div>
       </section>
 
       <section className="form-card">
-        <form className="form-stack" onSubmit={handleSubmit}>
-          <div className="form-grid form-grid-single">
-            <label className="field-group">
-              <span className="field-label">Email</span>
-              <input
-                className="field-input"
-                autoComplete="email"
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="admin@desafios.com"
-                type="email"
-                value={email}
-              />
-            </label>
+        {user ? (
+          <div className="form-stack">
+            <div className="session-badge">
+              <strong>{user.name}</strong>
+              <span>{user.email}</span>
+            </div>
 
-            <label className="field-group">
-              <span className="field-label">Senha</span>
-              <input
-                className="field-input"
-                autoComplete="current-password"
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder="Digite sua senha"
-                type="password"
-                value={password}
-              />
-            </label>
+            <div className="actions-row">
+              <Link className="button button-primary" to={redirectTo}>
+                Continuar
+              </Link>
+              <button
+                className="button button-secondary"
+                disabled={isLoading}
+                onClick={handleLogout}
+                type="button"
+              >
+                Encerrar sessao
+              </button>
+            </div>
           </div>
+        ) : (
+          <form className="form-stack" onSubmit={handleSubmit}>
+            <div className="form-grid form-grid-single">
+              <label className="field-group">
+                <span className="field-label">Email</span>
+                <input
+                  className="field-input"
+                  autoComplete="email"
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="admin@desafios.com"
+                  type="email"
+                  value={email}
+                />
+              </label>
 
-          <button className="button button-primary" disabled={isLoading} type="submit">
-            {isLoading ? "Entrando..." : "Entrar"}
-          </button>
-        </form>
+              <label className="field-group">
+                <span className="field-label">Senha</span>
+                <input
+                  className="field-input"
+                  autoComplete="current-password"
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="Digite sua senha"
+                  type="password"
+                  value={password}
+                />
+              </label>
+            </div>
+
+            <button
+              className="button button-primary"
+              disabled={isLoading || isSessionLoading}
+              type="submit"
+            >
+              {isLoading ? "Entrando..." : "Entrar"}
+            </button>
+          </form>
+        )}
 
         <div className="actions-row">
           <Link className="button button-secondary" to="/">
             Voltar para a home
           </Link>
-          <button className="button button-secondary" onClick={handleLogout} type="button">
-            Encerrar sessao
-          </button>
         </div>
-
-        <p className="support-text">{sessionMessage}</p>
-
-        {user ? (
-          <Link className="button button-secondary" to={redirectTo}>
-            Ir para area administrativa
-          </Link>
-        ) : null}
-
-        {errorMessage ? (
-          <p className="support-text support-text-error">{errorMessage}</p>
-        ) : null}
       </section>
     </div>
   );

@@ -1,10 +1,14 @@
 import { useEffect, useState } from "react";
 import ChallengeCard from "@/components/ChallengeCard";
+import { ChallengeCardSkeleton } from "@/components/LoadingSkeletons";
 import { loadChallenges } from "@/lib/challenges";
 import type { ChallengeSummary } from "@/lib/types";
 
+type ChallengeFilter = "active" | "finished" | "all";
+
 export default function ChallengesPage() {
   const [challenges, setChallenges] = useState<ChallengeSummary[]>([]);
+  const [filter, setFilter] = useState<ChallengeFilter>("all");
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -48,11 +52,57 @@ export default function ChallengesPage() {
     };
   }, []);
 
+  const filteredChallenges = challenges.filter((challenge) => {
+    if (filter === "all") {
+      return true;
+    }
+
+    if (filter === "finished") {
+      return challenge.status === "finished";
+    }
+
+    return challenge.status === "active";
+  });
+
+  const emptyFilterTitle =
+    filter === "finished"
+      ? "Nenhum desafio encerrado"
+      : filter === "active"
+        ? "Nenhum desafio ativo"
+        : "Nenhum desafio cadastrado";
+
   return (
     <div className="screen-stack">
       <section className="section-block">
         <div className="section-head">
           <h3 className="section-title">Todos os desafios</h3>
+        </div>
+
+        <div className="segment-control" role="tablist" aria-label="Filtrar desafios">
+          <button
+            aria-pressed={filter === "active"}
+            className={`segment-button ${filter === "active" ? "segment-button-active" : ""}`}
+            onClick={() => setFilter("active")}
+            type="button"
+          >
+            Ativos
+          </button>
+          <button
+            aria-pressed={filter === "finished"}
+            className={`segment-button ${filter === "finished" ? "segment-button-active" : ""}`}
+            onClick={() => setFilter("finished")}
+            type="button"
+          >
+            Encerrados
+          </button>
+          <button
+            aria-pressed={filter === "all"}
+            className={`segment-button ${filter === "all" ? "segment-button-active" : ""}`}
+            onClick={() => setFilter("all")}
+            type="button"
+          >
+            Todos
+          </button>
         </div>
 
         {errorMessage ? (
@@ -62,24 +112,17 @@ export default function ChallengesPage() {
           </section>
         ) : null}
 
-        {!errorMessage && isLoading ? (
+        {!errorMessage && isLoading ? <ChallengeCardSkeleton /> : null}
+
+        {!errorMessage && !isLoading && filteredChallenges.length === 0 ? (
           <section className="empty-state">
-            <h3 className="section-title">Carregando desafios</h3>
-            <p className="screen-subtitle">
-              Estamos buscando desafios ativos e inativos.
-            </p>
+            <h3 className="section-title">{emptyFilterTitle}</h3>
           </section>
         ) : null}
 
-        {!errorMessage && !isLoading && challenges.length === 0 ? (
-          <section className="empty-state">
-            <h3 className="section-title">Nenhum desafio cadastrado</h3>
-          </section>
-        ) : null}
-
-        {!errorMessage && !isLoading && challenges.length > 0 ? (
+        {!errorMessage && !isLoading && filteredChallenges.length > 0 ? (
           <div className="card-stack">
-            {challenges.map((challenge) => (
+            {filteredChallenges.map((challenge) => (
               <ChallengeCard challenge={challenge} key={challenge.id} showStatusText />
             ))}
           </div>

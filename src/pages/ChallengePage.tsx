@@ -1,8 +1,10 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { RankingSkeleton, SummarySkeleton } from "@/components/LoadingSkeletons";
 import { useAuthSession } from "@/lib/auth-context";
 import { ApiError } from "@/lib/api";
 import { addTeam, loadChallengeDetail } from "@/lib/challenges";
+import { useToast } from "@/lib/toast-context";
 import { formatChallengeTypeLabel } from "@/lib/format";
 import type { ChallengeDetail } from "@/lib/types";
 
@@ -30,15 +32,27 @@ function getRankingPlaceClassName(position: number) {
   return classNames.join(" ");
 }
 
+function getStandingResultLabel(challengeType: ChallengeDetail["type"], resultLabel: string) {
+  if (challengeType === "time" && resultLabel === "00:00:00") {
+    return "Aguardando tempo";
+  }
+
+  if (challengeType === "pace" && resultLabel === "Sem pace") {
+    return "Aguardando pace";
+  }
+
+  return resultLabel;
+}
+
 export default function ChallengePage() {
   const { challengeId = "" } = useParams();
   const { user } = useAuthSession();
+  const { showToast } = useToast();
   const [challenge, setChallenge] = useState<ChallengeDetail | null>(null);
   const [teamName, setTeamName] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [feedbackMessage, setFeedbackMessage] = useState("");
 
   useEffect(() => {
     let isMounted = true;
@@ -95,24 +109,24 @@ export default function ChallengePage() {
 
     setIsSubmitting(true);
     setErrorMessage("");
-    setFeedbackMessage("");
 
     try {
       const updatedChallenge = await addTeam(challenge.id, teamName.trim());
 
       if (!updatedChallenge) {
-        setErrorMessage("Desafio nao encontrado para adicionar equipe.");
+        showToast("Desafio nao encontrado para adicionar equipe.", "error");
         return;
       }
 
       setChallenge(updatedChallenge);
       setTeamName("");
-      setFeedbackMessage("Equipe adicionada com sucesso.");
+      showToast("Equipe adicionada.", "success");
     } catch (error) {
-      setErrorMessage(
+      showToast(
         error instanceof Error
           ? error.message
           : "Nao foi possivel adicionar a equipe.",
+        "error",
       );
     } finally {
       setIsSubmitting(false);
@@ -133,12 +147,10 @@ export default function ChallengePage() {
 
   if (isLoading) {
     return (
-      <section className="empty-state">
-        <h2 className="section-title">Carregando desafio</h2>
-        <p className="screen-subtitle">
-          Estamos montando o ranking atualizado das equipes.
-        </p>
-      </section>
+      <div className="screen-stack">
+        <SummarySkeleton />
+        <RankingSkeleton />
+      </div>
     );
   }
 
@@ -162,7 +174,7 @@ export default function ChallengePage() {
 
   return (
     <div className="screen-stack">
-      <section className="summary-card summary-card-compact">
+      <section className={`summary-card summary-card-compact summary-card-tone-${challenge.type}`}>
         <p className="card-kicker">{formatChallengeTypeLabel(challenge.type)}</p>
         <h2 className="screen-title">{challenge.title}</h2>
 
@@ -177,7 +189,9 @@ export default function ChallengePage() {
           </div>
           <div className="summary-pill">
             <span className="summary-pill-label">Parcial</span>
-            <strong className="summary-pill-value">{challenge.leaderResultLabel}</strong>
+            <strong className="summary-pill-value">
+              {getStandingResultLabel(challenge.type, challenge.leaderResultLabel)}
+            </strong>
           </div>
         </div>
       </section>
@@ -209,7 +223,6 @@ export default function ChallengePage() {
           )}
         </div>
 
-        {feedbackMessage ? <p className="support-text">{feedbackMessage}</p> : null}
         {errorMessage ? (
           <p className="support-text support-text-error">{errorMessage}</p>
         ) : null}
@@ -231,7 +244,9 @@ export default function ChallengePage() {
               </div>
 
               <div className="ranking-side">
-                <strong className="ranking-result">{team.resultLabel}</strong>
+                <strong className="ranking-result">
+                  {getStandingResultLabel(challenge.type, team.resultLabel)}
+                </strong>
                 <span className="inline-link">abrir equipe</span>
               </div>
             </Link>

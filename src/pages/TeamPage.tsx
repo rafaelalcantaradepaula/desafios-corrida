@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import FloatingNumberPicker from "@/components/FloatingNumberPicker";
+import { RosterSkeleton, SummarySkeleton } from "@/components/LoadingSkeletons";
 import { useAuthSession } from "@/lib/auth-context";
 import { ApiError } from "@/lib/api";
 import {
@@ -8,6 +9,7 @@ import {
   loadTeamDetail,
   updateParticipantResult,
 } from "@/lib/challenges";
+import { useToast } from "@/lib/toast-context";
 import {
   formatChallengeTypeLabel,
   formatResultByType,
@@ -39,6 +41,7 @@ function formatPreviewLabel(challengeType: ChallengeType, parts: TimeParts) {
 export default function TeamPage() {
   const { challengeTeamId = "" } = useParams();
   const { user } = useAuthSession();
+  const { showToast } = useToast();
   const [team, setTeam] = useState<TeamDetail | null>(null);
   const [participantName, setParticipantName] = useState("");
   const [resultForms, setResultForms] = useState<Record<string, TimeParts>>({});
@@ -49,7 +52,6 @@ export default function TeamPage() {
   const [savingParticipantIds, setSavingParticipantIds] = useState<Record<string, boolean>>({});
   const [failedSaveKeys, setFailedSaveKeys] = useState<Record<string, string>>({});
   const [errorMessage, setErrorMessage] = useState("");
-  const [feedbackMessage, setFeedbackMessage] = useState("");
   const autoSaveTimersRef = useRef<Record<string, number>>({});
 
   function clearAutoSaveTimer(participantId: string) {
@@ -173,7 +175,7 @@ export default function TeamPage() {
           ...currentState,
           [participantId]: currentKey,
         }));
-        setErrorMessage("Participante nao encontrado para atualizar resultado.");
+        showToast("Participante nao encontrado para atualizar resultado.", "error");
         return;
       }
 
@@ -188,10 +190,11 @@ export default function TeamPage() {
         ...currentState,
         [participantId]: currentKey,
       }));
-      setErrorMessage(
+      showToast(
         error instanceof Error
           ? error.message
           : "Nao foi possivel salvar o resultado.",
+        "error",
       );
     } finally {
       setSavingParticipantIds((currentState) => {
@@ -248,14 +251,13 @@ export default function TeamPage() {
 
     setIsAddingParticipant(true);
     setErrorMessage("");
-    setFeedbackMessage("");
 
     try {
       const nextParticipantName = participantName.trim();
       const updatedTeam = await addParticipant(team.id, nextParticipantName);
 
       if (!updatedTeam) {
-        setErrorMessage("Equipe nao encontrada para adicionar participante.");
+        showToast("Equipe nao encontrada para adicionar participante.", "error");
         return;
       }
 
@@ -266,12 +268,13 @@ export default function TeamPage() {
           ?? null,
       );
       setParticipantName("");
-      setFeedbackMessage("Participante adicionado com sucesso.");
+      showToast("Participante adicionado.", "success");
     } catch (error) {
-      setErrorMessage(
+      showToast(
         error instanceof Error
           ? error.message
           : "Nao foi possivel adicionar o participante.",
+        "error",
       );
     } finally {
       setIsAddingParticipant(false);
@@ -318,12 +321,10 @@ export default function TeamPage() {
 
   if (isLoading) {
     return (
-      <section className="empty-state">
-        <h2 className="section-title">Carregando equipe</h2>
-        <p className="screen-subtitle">
-          Estamos preparando a lista de participantes e seus resultados.
-        </p>
-      </section>
+      <div className="screen-stack">
+        <SummarySkeleton />
+        <RosterSkeleton />
+      </div>
     );
   }
 
@@ -354,7 +355,7 @@ export default function TeamPage() {
 
   return (
     <div className="screen-stack">
-      <section className="summary-card summary-card-compact">
+      <section className={`summary-card summary-card-compact summary-card-tone-${team.challengeType}`}>
         <p className="card-kicker">{formatChallengeTypeLabel(team.challengeType)}</p>
         <h2 className="screen-title">{team.teamName}</h2>
         <div className="summary-strip">
@@ -396,7 +397,6 @@ export default function TeamPage() {
           )}
         </div>
 
-        {feedbackMessage ? <p className="support-text">{feedbackMessage}</p> : null}
         {errorMessage ? (
           <p className="support-text support-text-error">{errorMessage}</p>
         ) : null}
@@ -410,13 +410,18 @@ export default function TeamPage() {
             const isExpanded = expandedParticipantId === participant.id;
             const isSaving = Boolean(savingParticipantIds[participant.id]);
             const isDirty = serializeTimeParts(parts) !== serializeTimeParts(savedParts);
+            const failedSaveKey = failedSaveKeys[participant.id];
             const participantStatus = isSaving
               ? "salvando"
+              : failedSaveKey && failedSaveKey === serializeTimeParts(parts)
+                ? "falha no auto-save"
               : isDirty
                 ? "auto-save pendente"
                 : participant.resultSeconds > 0
                   ? "salvo"
-                  : "sem resultado";
+                  : team.challengeType === "pace"
+                    ? "aguardando pace"
+                    : "aguardando tempo";
 
             if (!canEditParticipants) {
               return (

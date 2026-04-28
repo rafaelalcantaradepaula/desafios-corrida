@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuthSession } from "@/lib/auth-context";
 
@@ -72,10 +73,46 @@ function ShieldIcon() {
 export default function AppShell() {
   const location = useLocation();
   const { user } = useAuthSession();
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
   const isAdminRoute = location.pathname.startsWith("/admin");
 
+  useEffect(() => {
+    const viewport = window.visualViewport;
+
+    if (!viewport) {
+      return;
+    }
+
+    function isEditableElement(target: Element | null) {
+      return (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement
+      );
+    }
+
+    function syncKeyboardState() {
+      const activeElement = document.activeElement;
+      const heightDelta = window.innerHeight - viewport.height;
+      setIsKeyboardOpen(isEditableElement(activeElement) && heightDelta > 160);
+    }
+
+    syncKeyboardState();
+    viewport.addEventListener("resize", syncKeyboardState);
+    viewport.addEventListener("scroll", syncKeyboardState);
+    window.addEventListener("focusin", syncKeyboardState);
+    window.addEventListener("focusout", syncKeyboardState);
+
+    return () => {
+      viewport.removeEventListener("resize", syncKeyboardState);
+      viewport.removeEventListener("scroll", syncKeyboardState);
+      window.removeEventListener("focusin", syncKeyboardState);
+      window.removeEventListener("focusout", syncKeyboardState);
+    };
+  }, []);
+
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${isKeyboardOpen ? "app-shell-keyboard-open" : ""}`}>
       <div className="ambient-orb ambient-orb-left" />
       <div className="ambient-orb ambient-orb-right" />
 
@@ -92,7 +129,10 @@ export default function AppShell() {
           <Outlet />
         </main>
 
-        <nav className="bottom-nav" aria-label="Navegacao principal">
+        <nav
+          aria-label="Navegacao principal"
+          className={`bottom-nav ${isKeyboardOpen ? "bottom-nav-hidden" : ""}`}
+        >
           <NavLink className={({ isActive }) => navClassName(isActive)} end to="/">
             <HomeIcon />
             <span className="bottom-nav-label">Inicio</span>

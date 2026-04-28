@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import ChallengeCard from "@/components/ChallengeCard";
+import { ChallengeCardSkeleton } from "@/components/LoadingSkeletons";
 import { loadChallenges } from "@/lib/challenges";
 import type { ChallengeSummary } from "@/lib/types";
 
@@ -60,14 +61,7 @@ export default function HomePage() {
           </section>
         ) : null}
 
-        {!errorMessage && isLoading ? (
-          <section className="empty-state">
-            <h3 className="section-title">Carregando desafios</h3>
-            <p className="screen-subtitle">
-              Estamos consultando o ranking parcial das equipes.
-            </p>
-          </section>
-        ) : null}
+        {!errorMessage && isLoading ? <ChallengeCardSkeleton /> : null}
 
         {!errorMessage && !isLoading && challenges.length === 0 ? (
           <section className="empty-state">
@@ -77,8 +71,12 @@ export default function HomePage() {
 
         {!errorMessage && !isLoading && challenges.length > 0 ? (
           <div className="card-stack">
-            {challenges.map((challenge) => (
-              <ChallengeCard challenge={challenge} key={challenge.id} />
+            {challenges.map((challenge, index) => (
+              <ChallengeCard
+                challenge={challenge}
+                featured={index === 0}
+                key={challenge.id}
+              />
             ))}
           </div>
         ) : null}
