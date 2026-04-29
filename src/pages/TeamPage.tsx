@@ -410,7 +410,7 @@ export default function TeamPage() {
         ) : null}
 
         <div className="roster-list">
-          {team.participants.map((participant) => {
+          {team.participants.map((participant, index) => {
             const parts = resultForms[participant.id] ?? secondsToTimeParts(0);
             const savedParts =
               savedResultForms[participant.id] ?? secondsToTimeParts(participant.resultSeconds);
@@ -434,7 +434,10 @@ export default function TeamPage() {
 
             if (!canEditParticipants) {
               return (
-                <article className="roster-card roster-card-static" key={participant.id}>
+                <article
+                  className="roster-card roster-card-static"
+                  key={`participante-${index + 1}`}
+                >
                   <div className="roster-static-row">
                     <div className="roster-copy">
                       <p className="roster-name">{participant.name}</p>
@@ -448,7 +451,10 @@ export default function TeamPage() {
             }
 
             return (
-              <article className={`roster-card ${isExpanded ? "roster-card-open" : ""}`} key={participant.id}>
+              <article
+                className={`roster-card roster-card-editable ${isExpanded ? "roster-card-open" : ""}`}
+                key={`participante-${index + 1}`}
+              >
                 <button
                   className="roster-toggle"
                   onClick={() =>

@@ -122,8 +122,12 @@ export default function ChallengesPage() {
 
         {!errorMessage && !isLoading && filteredChallenges.length > 0 ? (
           <div className="card-stack">
-            {filteredChallenges.map((challenge) => (
-              <ChallengeCard challenge={challenge} key={challenge.id} showStatusText />
+            {filteredChallenges.map((challenge, index) => (
+              <ChallengeCard
+                challenge={challenge}
+                key={`desafio-${index + 1}`}
+                showStatusText
+              />
             ))}
           </div>
         ) : null}

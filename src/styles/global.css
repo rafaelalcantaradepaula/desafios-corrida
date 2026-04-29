@@ -754,7 +754,8 @@ textarea {
   border-radius: var(--radius-lg);
 }
 
-.ranking-row-leader {
+.ranking-row-leader,
+.ranking-row-position-1 {
   border-color: rgba(240, 90, 40, 0.4);
   background:
     radial-gradient(circle at right top, rgba(240, 90, 40, 0.2), transparent 34%),
@@ -763,7 +764,9 @@ textarea {
 }
 
 .ranking-row-podium-2,
-.ranking-row-podium-3 {
+.ranking-row-podium-3,
+.ranking-row-position-2,
+.ranking-row-position-3 {
   border-color: rgba(159, 198, 211, 0.24);
 }
 
@@ -782,17 +785,20 @@ textarea {
   font-weight: 800;
 }
 
-.ranking-place-podium-1 {
+.ranking-place-podium-1,
+.ranking-place-position-1 {
   background: linear-gradient(135deg, rgba(240, 90, 40, 0.9), rgba(255, 144, 95, 0.75));
   color: #fff6f2;
 }
 
-.ranking-place-podium-2 {
+.ranking-place-podium-2,
+.ranking-place-position-2 {
   background: linear-gradient(135deg, rgba(133, 160, 172, 0.92), rgba(182, 208, 218, 0.72));
   color: #06111a;
 }
 
-.ranking-place-podium-3 {
+.ranking-place-podium-3,
+.ranking-place-position-3 {
   background: linear-gradient(135deg, rgba(164, 109, 79, 0.92), rgba(212, 152, 115, 0.72));
   color: #fff7f2;
 }
@@ -1185,6 +1191,14 @@ textarea {
   justify-content: flex-end;
   gap: 10px;
   margin-top: auto;
+}
+
+.admin-user-management {
+  background: rgba(10, 25, 37, 0.78);
+}
+
+.admin-user-management-toggle {
+  min-height: 74px;
 }
 
 .form-grid-user {

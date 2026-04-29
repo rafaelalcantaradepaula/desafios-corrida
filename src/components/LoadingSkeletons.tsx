@@ -6,7 +6,10 @@ export function ChallengeCardSkeleton({ count = 3 }: CountProps) {
   return (
     <div className="card-stack" aria-hidden="true">
       {Array.from({ length: count }, (_, index) => (
-        <article className={`challenge-card skeleton-card ${index === 0 ? "skeleton-card-featured" : ""}`} key={index}>
+        <article
+          className={`challenge-card skeleton-card ${index === 0 ? "skeleton-card-featured" : ""}`}
+          key={`skeleton-desafio-${index + 1}`}
+        >
           <div className="skeleton-line skeleton-line-title" />
           <div className="skeleton-line skeleton-line-body" />
           <div className="skeleton-row">
@@ -26,7 +29,7 @@ export function SummarySkeleton() {
       <div className="skeleton-line skeleton-line-title" />
       <div className="summary-strip">
         {Array.from({ length: 3 }, (_, index) => (
-          <div className="summary-pill skeleton-pill" key={index}>
+          <div className="summary-pill skeleton-pill" key={`skeleton-resumo-${index + 1}`}>
             <div className="skeleton-line skeleton-line-label" />
             <div className="skeleton-line skeleton-line-body" />
           </div>
@@ -40,7 +43,7 @@ export function RankingSkeleton({ count = 4 }: CountProps) {
   return (
     <div className="ranking-list" aria-hidden="true">
       {Array.from({ length: count }, (_, index) => (
-        <article className="ranking-row skeleton-card" key={index}>
+        <article className="ranking-row skeleton-card" key={`skeleton-ranking-${index + 1}`}>
           <div className="ranking-place skeleton-place" />
           <div className="ranking-copy">
             <div className="skeleton-line skeleton-line-body" />
@@ -60,7 +63,7 @@ export function RosterSkeleton({ count = 4 }: CountProps) {
   return (
     <div className="roster-list" aria-hidden="true">
       {Array.from({ length: count }, (_, index) => (
-        <article className="roster-card skeleton-card" key={index}>
+        <article className="roster-card skeleton-card" key={`skeleton-participante-${index + 1}`}>
           <div className="roster-static-row">
             <div className="roster-copy">
               <div className="skeleton-line skeleton-line-body" />
@@ -78,7 +81,7 @@ export function DashboardSkeleton({ count = 2 }: CountProps) {
   return (
     <div className="dashboard-grid" aria-hidden="true">
       {Array.from({ length: count }, (_, index) => (
-        <article className="surface-card skeleton-card" key={index}>
+        <article className="surface-card skeleton-card" key={`skeleton-painel-${index + 1}`}>
           <div className="skeleton-line skeleton-line-title" />
           <div className="admin-card-copy">
             <div className="skeleton-line skeleton-line-short" />

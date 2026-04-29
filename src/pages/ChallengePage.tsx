@@ -13,27 +13,11 @@ import { formatChallengeTypeLabel } from "@/lib/format";
 import type { ChallengeDetail } from "@/lib/types";
 
 function getRankingRowClassName(position: number) {
-  const classNames = ["ranking-row", "ranking-row-link"];
-
-  if (position === 1) {
-    classNames.push("ranking-row-leader");
-  }
-
-  if (position <= 3) {
-    classNames.push(`ranking-row-podium-${position}`);
-  }
-
-  return classNames.join(" ");
+  return `ranking-row ranking-row-link ranking-row-position-${position}`;
 }
 
 function getRankingPlaceClassName(position: number) {
-  const classNames = ["ranking-place"];
-
-  if (position <= 3) {
-    classNames.push(`ranking-place-podium-${position}`);
-  }
-
-  return classNames.join(" ");
+  return `ranking-place ranking-place-position-${position}`;
 }
 
 function getStandingResultLabel(challengeType: ChallengeDetail["type"], resultLabel: string) {
@@ -290,10 +274,10 @@ export default function ChallengePage() {
         ) : null}
 
         <div className="ranking-list">
-          {challenge.teams.map((team) => (
+          {challenge.teams.map((team, index) => (
             <Link
               className={getRankingRowClassName(team.position)}
-              key={team.challengeTeamId}
+              key={`equipe-${index + 1}`}
               to={`/teams/${team.challengeTeamId}`}
             >
               <div className={getRankingPlaceClassName(team.position)}>{team.position}</div>

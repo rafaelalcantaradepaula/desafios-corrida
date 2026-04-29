@@ -20,6 +20,32 @@ import type { ChallengeSummary } from "@/lib/types";
 
 type ChallengeFilter = "active" | "finished" | "all";
 
+const challengeFilters: Array<{
+  label: string;
+  value: ChallengeFilter;
+}> = [
+  {
+    label: "Ativos",
+    value: "active",
+  },
+  {
+    label: "Encerrados",
+    value: "finished",
+  },
+  {
+    label: "Todos",
+    value: "all",
+  },
+];
+
+function getSegmentButtonClassName(isActive: boolean) {
+  return `segment-button ${isActive ? "segment-button-active" : ""}`;
+}
+
+function getUserManagementClassName(isOpen: boolean) {
+  return `roster-card admin-user-management ${isOpen ? "roster-card-open" : ""}`;
+}
+
 function sortUsers(users: AdminUserListItem[]) {
   return [...users].sort((left, right) => {
     const nameComparison = left.name.localeCompare(right.name);
@@ -375,30 +401,17 @@ export default function AdminPage() {
         </div>
 
         <div className="segment-control" role="tablist" aria-label="Filtrar desafios">
-          <button
-            aria-pressed={filter === "active"}
-            className={`segment-button ${filter === "active" ? "segment-button-active" : ""}`}
-            onClick={() => setFilter("active")}
-            type="button"
-          >
-            Ativos
-          </button>
-          <button
-            aria-pressed={filter === "finished"}
-            className={`segment-button ${filter === "finished" ? "segment-button-active" : ""}`}
-            onClick={() => setFilter("finished")}
-            type="button"
-          >
-            Encerrados
-          </button>
-          <button
-            aria-pressed={filter === "all"}
-            className={`segment-button ${filter === "all" ? "segment-button-active" : ""}`}
-            onClick={() => setFilter("all")}
-            type="button"
-          >
-            Todos
-          </button>
+          {challengeFilters.map((challengeFilter, index) => (
+            <button
+              aria-pressed={filter === challengeFilter.value}
+              className={getSegmentButtonClassName(filter === challengeFilter.value)}
+              key={`filtro-${index + 1}`}
+              onClick={() => setFilter(challengeFilter.value)}
+              type="button"
+            >
+              {challengeFilter.label}
+            </button>
+          ))}
         </div>
 
         {isCreateOpen ? (
@@ -460,13 +473,13 @@ export default function AdminPage() {
 
         {!isDashboardLoading && !dashboardErrorMessage && filteredChallenges.length > 0 ? (
           <div className="dashboard-grid">
-            {filteredChallenges.map((challenge) => {
+            {filteredChallenges.map((challenge, index) => {
               const isDeletingChallenge = Boolean(deletingChallengeIds[challenge.id]);
 
               return (
                 <article
                   className={`surface-card admin-challenge-card surface-card-tone-${challenge.type}`}
-                  key={challenge.id}
+                  key={`desafio-${index + 1}`}
                 >
                   <Link className="admin-challenge-link" to={`/challenges/${challenge.id}`}>
                     <p className={`challenge-card-state challenge-card-state-${challenge.status}`}>
@@ -501,10 +514,10 @@ export default function AdminPage() {
       </section>
 
       <section className="section-block">
-        <article className={`roster-card ${isUserManagementOpen ? "roster-card-open" : ""}`}>
+        <article className={getUserManagementClassName(isUserManagementOpen)}>
           <button
             aria-expanded={isUserManagementOpen}
-            className="roster-toggle"
+            className="roster-toggle admin-user-management-toggle"
             onClick={() => setIsUserManagementOpen((currentState) => !currentState)}
             type="button"
           >
@@ -576,10 +589,10 @@ export default function AdminPage() {
 
               {!isUsersLoading && !usersErrorMessage ? (
                 <div className="user-list">
-                  {adminUsers.map((adminUser) => (
+                  {adminUsers.map((adminUser, index) => (
                     <button
                       className="user-list-item"
-                      key={adminUser.id}
+                      key={`usuario-${index + 1}`}
                       onClick={() => setSelectedUser(adminUser)}
                       type="button"
                     >

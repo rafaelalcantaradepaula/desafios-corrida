@@ -70,7 +70,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {toasts.map((toast) => (
           <button
             className={`toast toast-${toast.tone}`}
-            key={toast.id}
+            key={`toast-${toast.id}`}
             onClick={() => dismissToast(toast.id)}
             type="button"
           >

@@ -75,7 +75,7 @@ export default function HomePage() {
               <ChallengeCard
                 challenge={challenge}
                 featured={index === 0}
-                key={challenge.id}
+                key={`desafio-${index + 1}`}
               />
             ))}
           </div>
