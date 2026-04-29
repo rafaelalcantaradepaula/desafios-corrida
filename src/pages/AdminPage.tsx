@@ -42,6 +42,7 @@ export default function AdminPage() {
   const [deletingChallengeIds, setDeletingChallengeIds] = useState<Record<string, boolean>>({});
   const [dashboardErrorMessage, setDashboardErrorMessage] = useState("");
   const [adminUsers, setAdminUsers] = useState<AdminUserListItem[]>([]);
+  const [isUserManagementOpen, setIsUserManagementOpen] = useState(false);
   const [isUsersLoading, setIsUsersLoading] = useState(true);
   const [usersErrorMessage, setUsersErrorMessage] = useState("");
   const [newUserName, setNewUserName] = useState("");
@@ -500,79 +501,102 @@ export default function AdminPage() {
       </section>
 
       <section className="section-block">
-        <div className="section-head">
-          <h3 className="section-title">Gestao de usuarios</h3>
-        </div>
+        <article className={`roster-card ${isUserManagementOpen ? "roster-card-open" : ""}`}>
+          <button
+            aria-expanded={isUserManagementOpen}
+            className="roster-toggle"
+            onClick={() => setIsUserManagementOpen((currentState) => !currentState)}
+            type="button"
+          >
+            <span className="roster-copy">
+              <span className="section-title">Gestao de usuarios</span>
+              <span className="roster-meta">
+                {adminUsers.length} administradores cadastrados
+              </span>
+            </span>
 
-        <article className="form-card">
-          <form className="form-stack" onSubmit={handleCreateUser}>
-            <div className="form-grid form-grid-user">
-              <label className="field-group">
-                <span className="field-label">Nome</span>
-                <input
-                  className="field-input"
-                  onChange={(event) => setNewUserName(event.target.value)}
-                  placeholder="Nome do admin"
-                  value={newUserName}
-                />
-              </label>
+            <span className="roster-headside">
+              <span
+                aria-hidden="true"
+                className={`roster-chevron ${isUserManagementOpen ? "roster-chevron-open" : ""}`}
+              />
+            </span>
+          </button>
 
-              <label className="field-group">
-                <span className="field-label">Email</span>
-                <input
-                  className="field-input"
-                  onChange={(event) => setNewUserEmail(event.target.value)}
-                  placeholder="admin@email.com"
-                  type="email"
-                  value={newUserEmail}
-                />
-              </label>
+          {isUserManagementOpen ? (
+            <div className="roster-editor">
+              <form className="form-stack" onSubmit={handleCreateUser}>
+                <div className="form-grid form-grid-user">
+                  <label className="field-group">
+                    <span className="field-label">Nome</span>
+                    <input
+                      className="field-input"
+                      onChange={(event) => setNewUserName(event.target.value)}
+                      placeholder="Nome do admin"
+                      value={newUserName}
+                    />
+                  </label>
 
-              <label className="field-group">
-                <span className="field-label">Senha</span>
-                <input
-                  className="field-input"
-                  onChange={(event) => setNewUserPassword(event.target.value)}
-                  placeholder="Minimo 8 caracteres"
-                  type="password"
-                  value={newUserPassword}
-                />
-              </label>
+                  <label className="field-group">
+                    <span className="field-label">Email</span>
+                    <input
+                      className="field-input"
+                      onChange={(event) => setNewUserEmail(event.target.value)}
+                      placeholder="admin@email.com"
+                      type="email"
+                      value={newUserEmail}
+                    />
+                  </label>
+
+                  <label className="field-group">
+                    <span className="field-label">Senha</span>
+                    <input
+                      className="field-input"
+                      onChange={(event) => setNewUserPassword(event.target.value)}
+                      placeholder="Minimo 8 caracteres"
+                      type="password"
+                      value={newUserPassword}
+                    />
+                  </label>
+                </div>
+
+                <button className="button button-primary" disabled={isCreatingUser} type="submit">
+                  {isCreatingUser ? "Criando..." : "Criar administrador"}
+                </button>
+              </form>
+
+              {isUsersLoading ? <DashboardSkeleton /> : null}
+
+              {!isUsersLoading && usersErrorMessage ? (
+                <section className="empty-state">
+                  <h3 className="section-title">Falha ao carregar usuarios</h3>
+                  <p className="screen-subtitle">{usersErrorMessage}</p>
+                </section>
+              ) : null}
+
+              {!isUsersLoading && !usersErrorMessage ? (
+                <div className="user-list">
+                  {adminUsers.map((adminUser) => (
+                    <button
+                      className="user-list-item"
+                      key={adminUser.id}
+                      onClick={() => setSelectedUser(adminUser)}
+                      type="button"
+                    >
+                      <span className="user-list-copy">
+                        <strong className="user-list-name">{adminUser.name}</strong>
+                        <span className="user-list-email">{adminUser.email}</span>
+                      </span>
+                      <span className="status-pill">
+                        {adminUser.id === user?.id ? "Voce" : "Admin"}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
             </div>
-
-            <button className="button button-primary" disabled={isCreatingUser} type="submit">
-              {isCreatingUser ? "Criando..." : "Criar administrador"}
-            </button>
-          </form>
+          ) : null}
         </article>
-
-        {isUsersLoading ? <DashboardSkeleton /> : null}
-
-        {!isUsersLoading && usersErrorMessage ? (
-          <section className="empty-state">
-            <h3 className="section-title">Falha ao carregar usuarios</h3>
-            <p className="screen-subtitle">{usersErrorMessage}</p>
-          </section>
-        ) : null}
-
-        {!isUsersLoading && !usersErrorMessage ? (
-          <div className="user-list">
-            {adminUsers.map((adminUser) => (
-              <button
-                className="user-list-item"
-                key={adminUser.id}
-                onClick={() => setSelectedUser(adminUser)}
-                type="button"
-              >
-                <span className="user-list-copy">
-                  <strong className="user-list-name">{adminUser.name}</strong>
-                  <span className="user-list-email">{adminUser.email}</span>
-                </span>
-                <span className="status-pill">{adminUser.id === user?.id ? "Voce" : "Admin"}</span>
-              </button>
-            ))}
-          </div>
-        ) : null}
       </section>
 
       {selectedUser ? (
