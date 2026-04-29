@@ -82,6 +82,11 @@ type RawChallengeTeamLookup = {
   id: string;
 };
 
+type RawChallengeRelationRow = {
+  challenge_team_id: string;
+  team_id: string;
+};
+
 let dataBootstrapPromise: Promise<void> | null = null;
 
 function toNumber(value: number | string | null | undefined) {
@@ -591,6 +596,66 @@ export async function updateChallengeStatusRecord(
   `;
 
   return getChallengeDetailById(challengeId);
+}
+
+export async function deleteChallengeRecord(challengeId: string) {
+  if (!getServerEnv().hasDatabaseUrl) {
+    return false;
+  }
+
+  await ensureDataBootstrap();
+
+  const db = getDb();
+  const challengeRows = (await db`
+    SELECT id
+    FROM challenges
+    WHERE id = ${challengeId}
+    LIMIT 1
+  `) as RawChallengeTeamLookup[];
+
+  if (!challengeRows[0]) {
+    return false;
+  }
+
+  const relations = (await db`
+    SELECT id AS challenge_team_id, team_id
+    FROM challenge_teams
+    WHERE challenge_id = ${challengeId}
+  `) as RawChallengeRelationRow[];
+  const challengeTeamIds = relations.map((relation) => relation.challenge_team_id);
+  const teamIds = relations.map((relation) => relation.team_id);
+
+  if (challengeTeamIds.length > 0) {
+    await db`
+      DELETE FROM participants
+      WHERE challenge_team_id = ANY(${challengeTeamIds})
+    `;
+  }
+
+  await db`
+    DELETE FROM challenge_teams
+    WHERE challenge_id = ${challengeId}
+  `;
+
+  const deletedChallenges = (await db`
+    DELETE FROM challenges
+    WHERE id = ${challengeId}
+    RETURNING id
+  `) as RawChallengeTeamLookup[];
+
+  if (teamIds.length > 0) {
+    await db`
+      DELETE FROM teams
+      WHERE id = ANY(${teamIds})
+        AND NOT EXISTS (
+          SELECT 1
+          FROM challenge_teams
+          WHERE challenge_teams.team_id = teams.id
+        )
+    `;
+  }
+
+  return Boolean(deletedChallenges[0]);
 }
 
 export async function addParticipantToTeam(challengeTeamId: string, name: string) {

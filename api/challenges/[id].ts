@@ -1,5 +1,6 @@
 import { getAuthenticatedAdmin } from "../_lib/auth.js";
 import {
+  deleteChallengeRecord,
   getChallengeDetailById,
   updateChallengeStatusRecord,
 } from "../_lib/challenges.js";
@@ -17,8 +18,12 @@ import {
 } from "../_lib/http.js";
 
 export default async function handler(request: ApiRequest, response: ApiResponse) {
-  if (request.method !== "GET" && request.method !== "PATCH") {
-    methodNotAllowed(response, ["GET", "PATCH"]);
+  if (
+    request.method !== "GET" &&
+    request.method !== "PATCH" &&
+    request.method !== "DELETE"
+  ) {
+    methodNotAllowed(response, ["GET", "PATCH", "DELETE"]);
     return;
   }
 
@@ -31,11 +36,25 @@ export default async function handler(request: ApiRequest, response: ApiResponse
       return;
     }
 
-    if (request.method === "PATCH") {
+    if (request.method === "PATCH" || request.method === "DELETE") {
       const admin = await getAuthenticatedAdmin(request);
 
       if (!admin) {
         unauthorized(response, "Sessao administrativa obrigatoria.");
+        return;
+      }
+
+      if (request.method === "DELETE") {
+        const wasDeleted = await deleteChallengeRecord(challengeId);
+
+        if (!wasDeleted) {
+          notFound(response, "Desafio nao encontrado.");
+          return;
+        }
+
+        ok(response, {
+          success: true,
+        });
         return;
       }
 

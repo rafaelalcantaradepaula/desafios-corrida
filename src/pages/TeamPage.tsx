@@ -38,6 +38,14 @@ function formatPreviewLabel(challengeType: ChallengeType, parts: TimeParts) {
   return formatResultByType(challengeType, totalSeconds, hasResult);
 }
 
+function formatStopwatchPreviewLabel(challengeType: ChallengeType, parts: TimeParts) {
+  if (challengeType === "pace") {
+    return `${parts.minutes}:${parts.seconds}`;
+  }
+
+  return `${parts.hours}:${parts.minutes}:${parts.seconds}`;
+}
+
 export default function TeamPage() {
   const { challengeTeamId = "" } = useParams();
   const { user } = useAuthSession();
@@ -407,6 +415,7 @@ export default function TeamPage() {
             const savedParts =
               savedResultForms[participant.id] ?? secondsToTimeParts(participant.resultSeconds);
             const previewLabel = formatPreviewLabel(team.challengeType, parts);
+            const stopwatchPreviewLabel = formatStopwatchPreviewLabel(team.challengeType, parts);
             const isExpanded = expandedParticipantId === participant.id;
             const isSaving = Boolean(savingParticipantIds[participant.id]);
             const isDirty = serializeTimeParts(parts) !== serializeTimeParts(savedParts);
@@ -465,38 +474,44 @@ export default function TeamPage() {
 
                 {isExpanded ? (
                   <div className="roster-editor">
-                    <div className="roster-editor-preview">
-                      <span className="summary-pill-label">Previa</span>
-                      <strong className="roster-editor-value">{previewLabel}</strong>
-                    </div>
+                    <div className="stopwatch-panel">
+                      <div className="stopwatch-preview">
+                        <span className="summary-pill-label">
+                          {team.challengeType === "pace" ? "mm:ss" : "hh:mm:ss"}
+                        </span>
+                        <strong className="stopwatch-preview-value">
+                          {stopwatchPreviewLabel}
+                        </strong>
+                      </div>
 
-                    <div className={pickerRowClassName}>
-                      {team.challengeType === "time" ? (
+                      <div className={pickerRowClassName}>
+                        {team.challengeType === "time" ? (
+                          <FloatingNumberPicker
+                            label="h"
+                            onChange={(value) =>
+                              updateResultField(participant.id, "hours", value)
+                            }
+                            options={hourOptions}
+                            value={parts.hours}
+                          />
+                        ) : null}
                         <FloatingNumberPicker
-                          label="h"
+                          label="m"
                           onChange={(value) =>
-                            updateResultField(participant.id, "hours", value)
+                            updateResultField(participant.id, "minutes", value)
                           }
-                          options={hourOptions}
-                          value={parts.hours}
+                          options={minuteOptions}
+                          value={parts.minutes}
                         />
-                      ) : null}
-                      <FloatingNumberPicker
-                        label="m"
-                        onChange={(value) =>
-                          updateResultField(participant.id, "minutes", value)
-                        }
-                        options={minuteOptions}
-                        value={parts.minutes}
-                      />
-                      <FloatingNumberPicker
-                        label="s"
-                        onChange={(value) =>
-                          updateResultField(participant.id, "seconds", value)
-                        }
-                        options={minuteSecondOptions}
-                        value={parts.seconds}
-                      />
+                        <FloatingNumberPicker
+                          label="s"
+                          onChange={(value) =>
+                            updateResultField(participant.id, "seconds", value)
+                          }
+                          options={minuteSecondOptions}
+                          value={parts.seconds}
+                        />
+                      </div>
                     </div>
                   </div>
                 ) : null}

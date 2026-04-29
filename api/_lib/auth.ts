@@ -1,4 +1,11 @@
-import { createHmac, pbkdf2Sync, randomBytes, timingSafeEqual } from "node:crypto";
+import {
+  createHmac,
+  pbkdf2Sync,
+  randomBytes,
+  randomUUID,
+  timingSafeEqual,
+} from "node:crypto";
+import { getDb } from "./db.js";
 import { getServerEnv } from "./env.js";
 import type { ApiRequest } from "./http.js";
 
@@ -12,11 +19,15 @@ const BOOTSTRAP_ADMIN_EMAIL = "admin@desafioscorrida.local";
 const BOOTSTRAP_ADMIN_PASSWORD_HASH =
   "pbkdf2_sha256$120000$QxKOZWWGBcJLU6rUEQ6cWjQ=$GZaf0iE1O+Zes20m6q4DOasblRtYkWaX6sTbTC4XuDo=";
 
-type AdminUser = {
+export type AdminUser = {
   id: string;
   name: string;
   email: string;
   role: string;
+};
+
+export type AdminUserRecord = AdminUser & {
+  createdAt: string;
 };
 
 type SessionPayload = {
@@ -26,6 +37,17 @@ type SessionPayload = {
   role: string;
   exp: number;
 };
+
+type AdminUserRow = {
+  id: string;
+  name: string;
+  email: string;
+  password_hash: string;
+  role: string;
+  created_at: string | Date;
+};
+
+let authBootstrapPromise: Promise<void> | null = null;
 
 function toBase64(value: Buffer) {
   return value.toString("base64");
@@ -148,6 +170,121 @@ function buildSessionCookie(token: string, expiresAt: Date) {
   return segments.join("; ");
 }
 
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase();
+}
+
+function mapUserRecord(row: AdminUserRow): AdminUserRecord {
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    role: row.role,
+    createdAt:
+      row.created_at instanceof Date
+        ? row.created_at.toISOString()
+        : row.created_at,
+  };
+}
+
+async function runAuthBootstrap() {
+  const env = getServerEnv();
+
+  if (!env.hasDatabaseUrl) {
+    return;
+  }
+
+  const db = getDb();
+
+  await db`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      email TEXT NOT NULL UNIQUE,
+      password_hash TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'admin',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+
+  await db`
+    CREATE TABLE IF NOT EXISTS admin_sessions (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      session_token_hash TEXT NOT NULL UNIQUE,
+      expires_at TIMESTAMPTZ NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+
+  await db`
+    CREATE INDEX IF NOT EXISTS admin_sessions_user_id_idx
+    ON admin_sessions(user_id)
+  `;
+
+  await db`
+    CREATE INDEX IF NOT EXISTS admin_sessions_expires_at_idx
+    ON admin_sessions(expires_at)
+  `;
+
+  await db`
+    INSERT INTO users (id, name, email, password_hash, role)
+    VALUES (
+      ${BOOTSTRAP_ADMIN_ID},
+      ${BOOTSTRAP_ADMIN_NAME},
+      ${BOOTSTRAP_ADMIN_EMAIL},
+      ${BOOTSTRAP_ADMIN_PASSWORD_HASH},
+      'admin'
+    )
+    ON CONFLICT (email) DO NOTHING
+  `;
+}
+
+async function ensureAuthBootstrap() {
+  if (!authBootstrapPromise) {
+    authBootstrapPromise = runAuthBootstrap().catch((error) => {
+      authBootstrapPromise = null;
+      throw error;
+    });
+  }
+
+  await authBootstrapPromise;
+}
+
+export function hasUserDatabase() {
+  return getServerEnv().hasDatabaseUrl;
+}
+
+async function getPersistedAdminUser(userId: string): Promise<AdminUser | null> {
+  if (!getServerEnv().hasDatabaseUrl) {
+    return null;
+  }
+
+  await ensureAuthBootstrap();
+
+  const db = getDb();
+  const users = (await db`
+    SELECT id, name, email, password_hash, role, created_at
+    FROM users
+    WHERE id = ${userId}
+    LIMIT 1
+  `) as AdminUserRow[];
+
+  const user = users[0];
+
+  if (!user) {
+    return null;
+  }
+
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+  };
+}
+
 export function hashPassword(password: string) {
   const salt = randomBytes(32);
   const hash = pbkdf2Sync(password, salt, PASSWORD_ITERATIONS, 32, "sha256");
@@ -225,10 +362,17 @@ export async function readAuthenticatedAdminSession(request: ApiRequest) {
     return null;
   }
 
-  const session = await createAdminSession(user);
+  const persistedUser = await getPersistedAdminUser(user.id);
+
+  if (getServerEnv().hasDatabaseUrl && !persistedUser) {
+    return null;
+  }
+
+  const sessionUser = persistedUser ?? user;
+  const session = await createAdminSession(sessionUser);
 
   return {
-    user,
+    user: sessionUser,
     cookie: session.cookie,
     expiresAt: session.expiresAt,
   };
@@ -244,11 +388,37 @@ export async function getAuthenticatedAdmin(request: ApiRequest): Promise<AdminU
 }
 
 export async function authenticateAdmin(email: string, password: string) {
-  if (email !== BOOTSTRAP_ADMIN_EMAIL) {
+  const normalizedEmail = normalizeEmail(email);
+
+  if (getServerEnv().hasDatabaseUrl) {
+    await ensureAuthBootstrap();
+
+    const db = getDb();
+    const users = (await db`
+      SELECT id, name, email, password_hash, role, created_at
+      FROM users
+      WHERE LOWER(email) = ${normalizedEmail}
+      LIMIT 1
+    `) as AdminUserRow[];
+
+    const user = users[0];
+
+    if (user && verifyPassword(password, user.password_hash)) {
+      return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      };
+    }
+
     return null;
   }
 
-  if (!verifyPassword(password, BOOTSTRAP_ADMIN_PASSWORD_HASH)) {
+  if (
+    normalizedEmail !== BOOTSTRAP_ADMIN_EMAIL ||
+    !verifyPassword(password, BOOTSTRAP_ADMIN_PASSWORD_HASH)
+  ) {
     return null;
   }
 
@@ -258,4 +428,126 @@ export async function authenticateAdmin(email: string, password: string) {
     email: BOOTSTRAP_ADMIN_EMAIL,
     role: "admin",
   };
+}
+
+export async function listAdminUsers() {
+  if (!getServerEnv().hasDatabaseUrl) {
+    return [
+      {
+        id: BOOTSTRAP_ADMIN_ID,
+        name: BOOTSTRAP_ADMIN_NAME,
+        email: BOOTSTRAP_ADMIN_EMAIL,
+        role: "admin",
+        createdAt: new Date(0).toISOString(),
+      },
+    ] as AdminUserRecord[];
+  }
+
+  await ensureAuthBootstrap();
+
+  const db = getDb();
+  const users = (await db`
+    SELECT id, name, email, password_hash, role, created_at
+    FROM users
+    ORDER BY name ASC, email ASC
+  `) as AdminUserRow[];
+
+  return users.map(mapUserRecord);
+}
+
+export async function createAdminUserRecord(input: {
+  name: string;
+  email: string;
+  password: string;
+}) {
+  if (!getServerEnv().hasDatabaseUrl) {
+    return null;
+  }
+
+  await ensureAuthBootstrap();
+
+  const db = getDb();
+  const email = normalizeEmail(input.email);
+  const existingUsers = (await db`
+    SELECT id, name, email, password_hash, role, created_at
+    FROM users
+    WHERE LOWER(email) = ${email}
+    LIMIT 1
+  `) as AdminUserRow[];
+
+  if (existingUsers[0]) {
+    return null;
+  }
+
+  const id = `usr_${randomUUID()}`;
+  const passwordHash = hashPassword(input.password);
+
+  const users = (await db`
+    INSERT INTO users (id, name, email, password_hash, role)
+    VALUES (${id}, ${input.name}, ${email}, ${passwordHash}, 'admin')
+    RETURNING id, name, email, password_hash, role, created_at
+  `) as AdminUserRow[];
+
+  return users[0] ? mapUserRecord(users[0]) : null;
+}
+
+export async function updateAdminUserRecord(
+  userId: string,
+  input: {
+    name?: string;
+    password?: string;
+  },
+) {
+  if (!getServerEnv().hasDatabaseUrl) {
+    return null;
+  }
+
+  await ensureAuthBootstrap();
+
+  const db = getDb();
+  const users = (await db`
+    SELECT id, name, email, password_hash, role, created_at
+    FROM users
+    WHERE id = ${userId}
+    LIMIT 1
+  `) as AdminUserRow[];
+
+  const user = users[0];
+
+  if (!user) {
+    return null;
+  }
+
+  const nextName = input.name ?? user.name;
+  const nextPasswordHash = input.password
+    ? hashPassword(input.password)
+    : user.password_hash;
+
+  const updatedUsers = (await db`
+    UPDATE users
+    SET name = ${nextName},
+        password_hash = ${nextPasswordHash},
+        updated_at = NOW()
+    WHERE id = ${userId}
+    RETURNING id, name, email, password_hash, role, created_at
+  `) as AdminUserRow[];
+
+  return updatedUsers[0] ? mapUserRecord(updatedUsers[0]) : null;
+}
+
+export async function deleteAdminUserRecord(userId: string) {
+  if (!getServerEnv().hasDatabaseUrl) {
+    return false;
+  }
+
+  await ensureAuthBootstrap();
+
+  const db = getDb();
+  const deletedRows = (await db`
+    DELETE FROM users
+    WHERE id = ${userId}
+    RETURNING id
+  `) as Array<{ id: string }>;
+
+  return Boolean(deletedRows[0]);
 }

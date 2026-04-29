@@ -109,6 +109,12 @@ export async function updateChallengeStatus(
   return response.data;
 }
 
+export async function deleteChallenge(challengeId: string) {
+  return apiFetch<{ success: boolean }>(`/challenges/${challengeId}`, {
+    method: "DELETE",
+  });
+}
+
 export async function addParticipant(challengeTeamId: string, name: string) {
   const response = await apiFetch<ApiEnvelope<TeamDetail | null>>(
     `/challenge-teams/${challengeTeamId}/participants`,

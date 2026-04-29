@@ -21,6 +21,7 @@ export default function FloatingNumberPicker({
 }: FloatingNumberPickerProps) {
   const holdDelayRef = useRef<number | null>(null);
   const holdIntervalRef = useRef<number | null>(null);
+  const selectedIndexRef = useRef(0);
   const selectedIndex = Math.max(0, options.indexOf(value));
   const canDecrease = selectedIndex > 0;
   const canIncrease = selectedIndex < options.length - 1;
@@ -43,18 +44,21 @@ export default function FloatingNumberPicker({
     const nextValue = options[nextIndex];
 
     if (nextValue) {
+      selectedIndexRef.current = nextIndex;
       onChange(nextValue);
     }
   }
 
   function handleStep(direction: "up" | "down") {
-    if (direction === "up" && canIncrease) {
-      updateAtIndex(selectedIndex + 1);
-      return;
-    }
+    const currentIndex = selectedIndexRef.current;
+    const nextIndex =
+      direction === "up"
+        ? Math.min(options.length - 1, currentIndex + 1)
+        : Math.max(0, currentIndex - 1);
 
-    if (direction === "down" && canDecrease) {
-      updateAtIndex(selectedIndex - 1);
+    if (nextIndex !== currentIndex) {
+      updateAtIndex(nextIndex);
+      return;
     }
   }
 
@@ -97,13 +101,14 @@ export default function FloatingNumberPicker({
     }
 
     event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
     stopStepping();
     handleStep(direction);
     holdDelayRef.current = window.setTimeout(() => {
       holdIntervalRef.current = window.setInterval(() => {
         handleStep(direction);
-      }, 90);
-    }, 360);
+      }, 72);
+    }, 280);
   }
 
   function handleButtonClick(event: MouseEvent<HTMLButtonElement>, direction: "up" | "down") {
@@ -111,6 +116,10 @@ export default function FloatingNumberPicker({
       handleStep(direction);
     }
   }
+
+  useEffect(() => {
+    selectedIndexRef.current = selectedIndex;
+  }, [selectedIndex]);
 
   useEffect(() => {
     return () => {
@@ -132,6 +141,7 @@ export default function FloatingNumberPicker({
         onPointerCancel={stopStepping}
         onPointerDown={(event) => startStepping(event, "up", canIncrease)}
         onPointerLeave={stopStepping}
+        onLostPointerCapture={stopStepping}
         onPointerUp={stopStepping}
         type="button"
       >
@@ -162,6 +172,7 @@ export default function FloatingNumberPicker({
         onPointerCancel={stopStepping}
         onPointerDown={(event) => startStepping(event, "down", canDecrease)}
         onPointerLeave={stopStepping}
+        onLostPointerCapture={stopStepping}
         onPointerUp={stopStepping}
         type="button"
       >

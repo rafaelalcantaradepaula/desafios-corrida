@@ -2,34 +2,69 @@ import { FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { DashboardSkeleton } from "@/components/LoadingSkeletons";
 import {
+  createAdminUser,
+  deleteAdminUser,
+  listAdminUsers,
+  updateAdminUser,
+  type AdminUserListItem,
+} from "@/lib/admin-users";
+import {
   createChallenge,
+  deleteChallenge,
   loadChallenges,
 } from "@/lib/challenges";
 import { useAuthSession } from "@/lib/auth-context";
+import { formatChallengeTypeLabel } from "@/lib/format";
 import { useToast } from "@/lib/toast-context";
 import type { ChallengeSummary } from "@/lib/types";
+
+type ChallengeFilter = "active" | "finished" | "all";
+
+function sortUsers(users: AdminUserListItem[]) {
+  return [...users].sort((left, right) => {
+    const nameComparison = left.name.localeCompare(right.name);
+    return nameComparison || left.email.localeCompare(right.email);
+  });
+}
 
 export default function AdminPage() {
   const navigate = useNavigate();
   const { showToast } = useToast();
-  useAuthSession();
+  const { user } = useAuthSession();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [type, setType] = useState<"pace" | "time">("pace");
+  const [filter, setFilter] = useState<ChallengeFilter>("all");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [challenges, setChallenges] = useState<ChallengeSummary[]>([]);
   const [isDashboardLoading, setIsDashboardLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deletingChallengeIds, setDeletingChallengeIds] = useState<Record<string, boolean>>({});
   const [dashboardErrorMessage, setDashboardErrorMessage] = useState("");
+  const [adminUsers, setAdminUsers] = useState<AdminUserListItem[]>([]);
+  const [isUsersLoading, setIsUsersLoading] = useState(true);
+  const [usersErrorMessage, setUsersErrorMessage] = useState("");
+  const [newUserName, setNewUserName] = useState("");
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserPassword, setNewUserPassword] = useState("");
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<AdminUserListItem | null>(null);
+  const [editUserName, setEditUserName] = useState("");
+  const [editUserPassword, setEditUserPassword] = useState("");
+  const [isSavingUserName, setIsSavingUserName] = useState(false);
+  const [isSavingUserPassword, setIsSavingUserPassword] = useState(false);
+  const [isDeletingUser, setIsDeletingUser] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
 
-    async function fetchDashboardData() {
+    async function fetchChallenges() {
       setIsDashboardLoading(true);
 
       try {
-        const challengeList = await loadChallenges();
+        const challengeList = await loadChallenges({
+          scope: "all",
+        });
 
         if (!isMounted) {
           return;
@@ -54,12 +89,75 @@ export default function AdminPage() {
       }
     }
 
-    void fetchDashboardData();
+    void fetchChallenges();
 
     return () => {
       isMounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function fetchUsers() {
+      setIsUsersLoading(true);
+
+      try {
+        const users = await listAdminUsers();
+
+        if (!isMounted) {
+          return;
+        }
+
+        setAdminUsers(sortUsers(users));
+        setUsersErrorMessage("");
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        setUsersErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "Nao foi possivel carregar os usuarios.",
+        );
+      } finally {
+        if (isMounted) {
+          setIsUsersLoading(false);
+        }
+      }
+    }
+
+    void fetchUsers();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    setEditUserName(selectedUser?.name ?? "");
+    setEditUserPassword("");
+  }, [selectedUser]);
+
+  const filteredChallenges = challenges.filter((challenge) => {
+    if (filter === "all") {
+      return true;
+    }
+
+    if (filter === "finished") {
+      return challenge.status === "finished";
+    }
+
+    return challenge.status === "active";
+  });
+
+  const emptyFilterTitle =
+    filter === "finished"
+      ? "Nenhum desafio encerrado"
+      : filter === "active"
+        ? "Nenhum desafio ativo"
+        : "Nenhum desafio cadastrado";
 
   async function handleCreateChallenge(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -89,17 +187,216 @@ export default function AdminPage() {
     }
   }
 
+  async function handleDeleteChallenge(challenge: ChallengeSummary) {
+    const shouldDelete = window.confirm(
+      `Excluir o desafio "${challenge.title}" e todos os seus dados?`,
+    );
+
+    if (!shouldDelete) {
+      return;
+    }
+
+    setDeletingChallengeIds((currentState) => ({
+      ...currentState,
+      [challenge.id]: true,
+    }));
+
+    try {
+      await deleteChallenge(challenge.id);
+      setChallenges((currentChallenges) =>
+        currentChallenges.filter((currentChallenge) => currentChallenge.id !== challenge.id),
+      );
+      showToast("Desafio deletado.", "success");
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Nao foi possivel deletar o desafio.",
+        "error",
+      );
+    } finally {
+      setDeletingChallengeIds((currentState) => {
+        const nextState = { ...currentState };
+        delete nextState[challenge.id];
+        return nextState;
+      });
+    }
+  }
+
+  async function handleCreateUser(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setIsCreatingUser(true);
+
+    try {
+      const createdUser = await createAdminUser({
+        name: newUserName,
+        email: newUserEmail,
+        password: newUserPassword,
+      });
+
+      setAdminUsers((currentUsers) => sortUsers([...currentUsers, createdUser]));
+      setNewUserName("");
+      setNewUserEmail("");
+      setNewUserPassword("");
+      showToast("Administrador criado.", "success");
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Nao foi possivel criar o administrador.",
+        "error",
+      );
+    } finally {
+      setIsCreatingUser(false);
+    }
+  }
+
+  async function handleSaveUserName(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedUser || !editUserName.trim()) {
+      return;
+    }
+
+    setIsSavingUserName(true);
+
+    try {
+      const updatedUser = await updateAdminUser(selectedUser.id, {
+        name: editUserName,
+      });
+
+      setAdminUsers((currentUsers) =>
+        sortUsers(
+          currentUsers.map((currentUser) =>
+            currentUser.id === updatedUser.id ? updatedUser : currentUser,
+          ),
+        ),
+      );
+      setSelectedUser(updatedUser);
+      showToast("Usuario atualizado.", "success");
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Nao foi possivel atualizar o usuario.",
+        "error",
+      );
+    } finally {
+      setIsSavingUserName(false);
+    }
+  }
+
+  async function handleSaveUserPassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedUser || !editUserPassword.trim()) {
+      return;
+    }
+
+    setIsSavingUserPassword(true);
+
+    try {
+      const updatedUser = await updateAdminUser(selectedUser.id, {
+        password: editUserPassword,
+      });
+
+      setAdminUsers((currentUsers) =>
+        sortUsers(
+          currentUsers.map((currentUser) =>
+            currentUser.id === updatedUser.id ? updatedUser : currentUser,
+          ),
+        ),
+      );
+      setSelectedUser(updatedUser);
+      setEditUserPassword("");
+      showToast("Senha alterada.", "success");
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Nao foi possivel alterar a senha.",
+        "error",
+      );
+    } finally {
+      setIsSavingUserPassword(false);
+    }
+  }
+
+  async function handleDeleteUser() {
+    if (!selectedUser) {
+      return;
+    }
+
+    if (selectedUser.id === user?.id) {
+      showToast("Nao e possivel excluir o usuario da sessao atual.", "error");
+      return;
+    }
+
+    const shouldDelete = window.confirm(`Excluir o usuario "${selectedUser.name}"?`);
+
+    if (!shouldDelete) {
+      return;
+    }
+
+    setIsDeletingUser(true);
+
+    try {
+      await deleteAdminUser(selectedUser.id);
+      setAdminUsers((currentUsers) =>
+        currentUsers.filter((currentUser) => currentUser.id !== selectedUser.id),
+      );
+      setSelectedUser(null);
+      showToast("Usuario deletado.", "success");
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Nao foi possivel deletar o usuario.",
+        "error",
+      );
+    } finally {
+      setIsDeletingUser(false);
+    }
+  }
+
   return (
     <div className="screen-stack">
       <section className="section-block">
         <div className="section-head">
-          <h3 className="section-title">Desafios ativos</h3>
+          <h3 className="section-title">Todos os desafios</h3>
           <button
             className="button button-secondary button-compact"
             onClick={() => setIsCreateOpen((currentState) => !currentState)}
             type="button"
           >
             {isCreateOpen ? "Fechar" : "Novo desafio"}
+          </button>
+        </div>
+
+        <div className="segment-control" role="tablist" aria-label="Filtrar desafios">
+          <button
+            aria-pressed={filter === "active"}
+            className={`segment-button ${filter === "active" ? "segment-button-active" : ""}`}
+            onClick={() => setFilter("active")}
+            type="button"
+          >
+            Ativos
+          </button>
+          <button
+            aria-pressed={filter === "finished"}
+            className={`segment-button ${filter === "finished" ? "segment-button-active" : ""}`}
+            onClick={() => setFilter("finished")}
+            type="button"
+          >
+            Encerrados
+          </button>
+          <button
+            aria-pressed={filter === "all"}
+            className={`segment-button ${filter === "all" ? "segment-button-active" : ""}`}
+            onClick={() => setFilter("all")}
+            type="button"
+          >
+            Todos
           </button>
         </div>
 
@@ -154,35 +451,210 @@ export default function AdminPage() {
           </section>
         ) : null}
 
-        {!isDashboardLoading && !dashboardErrorMessage && challenges.length === 0 ? (
+        {!isDashboardLoading && !dashboardErrorMessage && filteredChallenges.length === 0 ? (
           <section className="empty-state">
-            <h3 className="section-title">Nenhum desafio ativo</h3>
-            <p className="screen-subtitle">
-              Crie um desafio acima para liberar os fluxos de equipes e participantes.
-            </p>
+            <h3 className="section-title">{emptyFilterTitle}</h3>
           </section>
         ) : null}
 
-        {!isDashboardLoading && !dashboardErrorMessage && challenges.length > 0 ? (
+        {!isDashboardLoading && !dashboardErrorMessage && filteredChallenges.length > 0 ? (
           <div className="dashboard-grid">
-            {challenges.map((challenge) => {
+            {filteredChallenges.map((challenge) => {
+              const isDeletingChallenge = Boolean(deletingChallengeIds[challenge.id]);
+
               return (
-                <Link
-                  className={`surface-card surface-card-link surface-card-tone-${challenge.type}`}
+                <article
+                  className={`surface-card admin-challenge-card surface-card-tone-${challenge.type}`}
                   key={challenge.id}
-                  to={`/challenges/${challenge.id}`}
                 >
-                  <h3 className="challenge-card-title">{challenge.title}</h3>
-                  <div className="admin-card-copy">
-                    <div>{challenge.teamCount} equipes</div>
-                    <div>Lider: {challenge.leaderTeamName}</div>
+                  <Link className="admin-challenge-link" to={`/challenges/${challenge.id}`}>
+                    <p className={`challenge-card-state challenge-card-state-${challenge.status}`}>
+                      {challenge.statusLabel}
+                    </p>
+                    <h3 className="challenge-card-title">{challenge.title}</h3>
+                    <div className="admin-card-copy">
+                      <div>{formatChallengeTypeLabel(challenge.type)}</div>
+                      <div>{challenge.teamCount} equipes</div>
+                      <div>Lider: {challenge.leaderTeamName}</div>
+                    </div>
+                  </Link>
+
+                  <div className="admin-card-actions">
+                    <Link className="button button-secondary button-compact" to={`/challenges/${challenge.id}`}>
+                      Abrir
+                    </Link>
+                    <button
+                      className="button button-danger button-compact"
+                      disabled={isDeletingChallenge}
+                      onClick={() => void handleDeleteChallenge(challenge)}
+                      type="button"
+                    >
+                      {isDeletingChallenge ? "Deletando..." : "Deletar"}
+                    </button>
                   </div>
-                </Link>
+                </article>
               );
             })}
           </div>
         ) : null}
       </section>
+
+      <section className="section-block">
+        <div className="section-head">
+          <h3 className="section-title">Gestao de usuarios</h3>
+        </div>
+
+        <article className="form-card">
+          <form className="form-stack" onSubmit={handleCreateUser}>
+            <div className="form-grid form-grid-user">
+              <label className="field-group">
+                <span className="field-label">Nome</span>
+                <input
+                  className="field-input"
+                  onChange={(event) => setNewUserName(event.target.value)}
+                  placeholder="Nome do admin"
+                  value={newUserName}
+                />
+              </label>
+
+              <label className="field-group">
+                <span className="field-label">Email</span>
+                <input
+                  className="field-input"
+                  onChange={(event) => setNewUserEmail(event.target.value)}
+                  placeholder="admin@email.com"
+                  type="email"
+                  value={newUserEmail}
+                />
+              </label>
+
+              <label className="field-group">
+                <span className="field-label">Senha</span>
+                <input
+                  className="field-input"
+                  onChange={(event) => setNewUserPassword(event.target.value)}
+                  placeholder="Minimo 8 caracteres"
+                  type="password"
+                  value={newUserPassword}
+                />
+              </label>
+            </div>
+
+            <button className="button button-primary" disabled={isCreatingUser} type="submit">
+              {isCreatingUser ? "Criando..." : "Criar administrador"}
+            </button>
+          </form>
+        </article>
+
+        {isUsersLoading ? <DashboardSkeleton /> : null}
+
+        {!isUsersLoading && usersErrorMessage ? (
+          <section className="empty-state">
+            <h3 className="section-title">Falha ao carregar usuarios</h3>
+            <p className="screen-subtitle">{usersErrorMessage}</p>
+          </section>
+        ) : null}
+
+        {!isUsersLoading && !usersErrorMessage ? (
+          <div className="user-list">
+            {adminUsers.map((adminUser) => (
+              <button
+                className="user-list-item"
+                key={adminUser.id}
+                onClick={() => setSelectedUser(adminUser)}
+                type="button"
+              >
+                <span className="user-list-copy">
+                  <strong className="user-list-name">{adminUser.name}</strong>
+                  <span className="user-list-email">{adminUser.email}</span>
+                </span>
+                <span className="status-pill">{adminUser.id === user?.id ? "Voce" : "Admin"}</span>
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </section>
+
+      {selectedUser ? (
+        <div
+          className="modal-backdrop"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setSelectedUser(null);
+            }
+          }}
+          role="presentation"
+        >
+          <section
+            aria-modal="true"
+            className="modal-card"
+            role="dialog"
+          >
+            <div className="section-head">
+              <div>
+                <p className="card-kicker">Administrador</p>
+                <h3 className="section-title">{selectedUser.email}</h3>
+              </div>
+              <button
+                className="button button-secondary button-compact"
+                onClick={() => setSelectedUser(null)}
+                type="button"
+              >
+                Fechar
+              </button>
+            </div>
+
+            <form className="form-stack" onSubmit={handleSaveUserName}>
+              <label className="field-group">
+                <span className="field-label">Nome</span>
+                <input
+                  className="field-input"
+                  onChange={(event) => setEditUserName(event.target.value)}
+                  value={editUserName}
+                />
+              </label>
+
+              <button
+                className="button button-primary"
+                disabled={isSavingUserName || !editUserName.trim()}
+                type="submit"
+              >
+                {isSavingUserName ? "Salvando..." : "Salvar nome"}
+              </button>
+            </form>
+
+            <form className="form-stack" onSubmit={handleSaveUserPassword}>
+              <label className="field-group">
+                <span className="field-label">Nova senha</span>
+                <input
+                  className="field-input"
+                  onChange={(event) => setEditUserPassword(event.target.value)}
+                  placeholder="Minimo 8 caracteres"
+                  type="password"
+                  value={editUserPassword}
+                />
+              </label>
+
+              <button
+                className="button button-secondary"
+                disabled={isSavingUserPassword || !editUserPassword.trim()}
+                type="submit"
+              >
+                {isSavingUserPassword ? "Alterando..." : "Alterar senha"}
+              </button>
+            </form>
+
+            <button
+              className="button button-danger"
+              disabled={isDeletingUser || selectedUser.id === user?.id}
+              onClick={() => void handleDeleteUser()}
+              type="button"
+            >
+              {isDeletingUser ? "Deletando..." : "Deletar usuario"}
+            </button>
+          </section>
+        </div>
+      ) : null}
     </div>
   );
 }
