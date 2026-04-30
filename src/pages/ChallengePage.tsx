@@ -192,6 +192,7 @@ export default function ChallengePage() {
   const adminActionHref = user
     ? `/admin?intent=team-add&challengeId=${encodeURIComponent(challenge.id)}`
     : `/login?redirect=${encodeURIComponent(`/admin?intent=team-add&challengeId=${challenge.id}`)}`;
+  const challengeDescription = challenge.description.trim();
 
   return (
     <div className="screen-stack">
@@ -223,6 +224,10 @@ export default function ChallengePage() {
             </label>
           ) : null}
         </div>
+
+        {challengeDescription ? (
+          <p className="screen-subtitle">{challengeDescription}</p>
+        ) : null}
 
         <div className="summary-strip">
           <div className="summary-pill">

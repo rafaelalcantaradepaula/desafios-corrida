@@ -364,8 +364,20 @@ export default function TeamPage() {
   return (
     <div className="screen-stack">
       <section className={`summary-card summary-card-compact summary-card-tone-${team.challengeType}`}>
-        <p className="card-kicker">{formatChallengeTypeLabel(team.challengeType)}</p>
-        <h2 className="screen-title">{team.teamName}</h2>
+        <div className="summary-card-head">
+          <div className="summary-card-title-block">
+            <p className="card-kicker">{formatChallengeTypeLabel(team.challengeType)}</p>
+            <h2 className="screen-title">{team.teamName}</h2>
+          </div>
+
+          <Link
+            className="button button-secondary button-compact"
+            to={`/challenges/${team.challengeId}`}
+          >
+            Voltar
+          </Link>
+        </div>
+
         <div className="summary-strip">
           <div className="summary-pill summary-pill-wide">
             <span className="summary-pill-label">Desafio</span>

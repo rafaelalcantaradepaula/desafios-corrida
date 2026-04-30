@@ -5,6 +5,7 @@ import type { ChallengeSummary } from "@/lib/types";
 type ChallengeCardProps = {
   challenge: ChallengeSummary;
   featured?: boolean;
+  showDescription?: boolean;
   showStatusText?: boolean;
 };
 
@@ -23,9 +24,11 @@ function getResultLabel(challenge: ChallengeSummary) {
 export default function ChallengeCard({
   challenge,
   featured = false,
+  showDescription = false,
   showStatusText = false,
 }: ChallengeCardProps) {
   const resultLabel = getResultLabel(challenge);
+  const description = challenge.description.trim();
 
   return (
     <Link
@@ -46,6 +49,10 @@ export default function ChallengeCard({
           {formatChallengeTypeLabel(challenge.type)}
         </span>
       </div>
+
+      {showDescription && description ? (
+        <p className="challenge-card-copy">{description}</p>
+      ) : null}
 
       <div className="challenge-card-primary">
         <div className="challenge-card-leading">

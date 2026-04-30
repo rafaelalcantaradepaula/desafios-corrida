@@ -23,7 +23,7 @@ export default function FloatingNumberPicker({
   const holdIntervalRef = useRef<number | null>(null);
   const selectedIndexRef = useRef(0);
   const selectedIndex = Math.max(0, options.indexOf(value));
-  const canDecrease = selectedIndex > 0;
+  const canDecrease = options.length > 1;
   const canIncrease = selectedIndex < options.length - 1;
   const maxDigits = Math.max(...options.map((option) => option.length));
   const minValue = Number(options[0] ?? "0");
@@ -54,7 +54,9 @@ export default function FloatingNumberPicker({
     const nextIndex =
       direction === "up"
         ? Math.min(options.length - 1, currentIndex + 1)
-        : Math.max(0, currentIndex - 1);
+        : currentIndex === 0
+          ? options.length - 1
+          : currentIndex - 1;
 
     if (nextIndex !== currentIndex) {
       updateAtIndex(nextIndex);

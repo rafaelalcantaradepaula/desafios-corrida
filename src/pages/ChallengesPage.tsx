@@ -126,6 +126,7 @@ export default function ChallengesPage() {
               <ChallengeCard
                 challenge={challenge}
                 key={`desafio-${index + 1}`}
+                showDescription
                 showStatusText
               />
             ))}
